@@ -1,0 +1,6 @@
+@import "../js/styles/fonts.css";
+@import "../js/styles/theme.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
