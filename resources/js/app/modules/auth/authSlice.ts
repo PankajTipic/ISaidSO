@@ -7,10 +7,13 @@ interface User {
     email: string;
     username: string;
     country?: string;
+    city?: string;
     avatar?: string;
     login_method: string;
     is_profile_completed?: boolean | number;
     avatar_url?: string;
+    role: string;
+    is_blocked: boolean;
 }
 
 interface AuthState {

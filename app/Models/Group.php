@@ -9,7 +9,7 @@ class Group extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'description', 'is_private', 'user_id', 'field_id'];
+    protected $fillable = ['name', 'description', 'is_private', 'user_id', 'field_id', 'is_blocked'];
 
     public function members()
     {
@@ -25,6 +25,12 @@ class Group extends Model
     {
         return $this->belongsTo(Field::class);
     }
+
+    public function questions()
+    {
+        return $this->belongsToMany(Question::class , 'group_question');
+    }
+
 
 
 

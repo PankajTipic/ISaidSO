@@ -1,9 +1,9 @@
 // import { useState } from 'react';
 // import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs';
-// import { PredictionCard } from '@/app/components/PredictionCard';
+// import { PollCard } from '@/app/components/PollCard';
 // import { MobileNav } from '@/app/components/MobileNav';
 // import { TopNav } from '@/app/components/TopNav';
-// import { mockPredictions, currentUser } from '@/app/data/mockData';
+// import { mockpolls, currentUser } from '@/app/data/mockData';
 // import { Category } from '@/app/types';
 // import { Plus } from 'lucide-react';
 // import { useNavigate } from 'react-router';
@@ -18,12 +18,12 @@
 //   { value: 'entertainment', label: 'Entertainment' },
 // ];
 
-// export function HomeScreen() {
+// export function PollScreen() {
 //   const navigate = useNavigate();
 //   const [selectedCategory, setSelectedCategory] = useState<Category>('trending');
 //   const [searchQuery, setSearchQuery] = useState('');
 
-//   const filteredPredictions = mockPredictions.filter((pred) => {
+//   const filteredpolls = mockpolls.filter((pred) => {
 //     const categoryMatch = selectedCategory === 'trending' || pred.category === selectedCategory;
 //     const searchMatch = pred.text.toLowerCase().includes(searchQuery.toLowerCase());
 //     return categoryMatch && searchMatch;
@@ -50,27 +50,27 @@
 //           </TabsList>
 //         </Tabs>
 
-//         {/* Predictions Grid */}
+//         {/* polls Grid */}
 //         <motion.div
 //           className="space-y-4"
 //           initial={{ opacity: 0 }}
 //           animate={{ opacity: 1 }}
 //           transition={{ duration: 0.3 }}
 //         >
-//           {filteredPredictions.map((prediction, index) => (
+//           {filteredpolls.map((poll, index) => (
 //             <motion.div
-//               key={prediction.id}
+//               key={poll.id}
 //               initial={{ opacity: 0, y: 20 }}
 //               animate={{ opacity: 1, y: 0 }}
 //               transition={{ delay: index * 0.05 }}
 //             >
-//               <PredictionCard prediction={prediction} />
+//               <PollCard poll={poll} />
 //             </motion.div>
 //           ))}
 
-//           {filteredPredictions.length === 0 && (
+//           {filteredpolls.length === 0 && (
 //             <div className="text-center py-12">
-//               <p className="text-muted-foreground">No predictions found</p>
+//               <p className="text-muted-foreground">No polls found</p>
 //             </div>
 //           )}
 //         </motion.div>
@@ -78,7 +78,7 @@
 
 //       {/* Floating Create Button - Mobile Only */}
 //       <button
-//         onClick={() => navigate('/create')}
+//         onClick={() => navigate('/create-poll')}
 //         className="md:hidden fixed bottom-20 right-6 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl z-40 transition-transform hover:scale-110"
 //         style={{
 //           background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
@@ -117,7 +117,7 @@
 
 // import { useState, useEffect } from 'react';
 // import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs';
-// import { PredictionCard } from '@/app/components/PredictionCard';
+// import { PollCard } from '@/app/components/PollCard';
 // import { MobileNav } from '@/app/components/MobileNav';
 // import { TopNav } from '@/app/components/TopNav';
 // import { Plus } from 'lucide-react';
@@ -135,16 +135,16 @@
 //   { value: 'entertainment', label: 'Entertainment' },
 // ];
 
-// export function HomeScreen() {
+// export function PollScreen() {
 //   const navigate = useNavigate();
 //   const [selectedCategory, setSelectedCategory] = useState('trending');
 //   const [searchQuery, setSearchQuery] = useState('');
-//   const [predictions, setPredictions] = useState<any[]>([]);
+//   const [polls, setpolls] = useState<any[]>([]);
 //   const [loading, setLoading] = useState(true);
 //   const [error, setError] = useState<string | null>(null);
 
 //   useEffect(() => {
-//     const fetchPredictions = async () => {
+//     const fetchpolls = async () => {
 //       try {
 //         setLoading(true);
 //         setError(null);
@@ -171,26 +171,26 @@
 //         const data = await res.json();
 //         const items = Array.isArray(data) ? data : data.data ?? data ?? [];
 
-//         console.log("Raw predictions from API:", items);
+//         console.log("Raw polls from API:", items);
 //         if (items.length > 0) {
-//           console.log("First prediction keys:", Object.keys(items[0]));
+//           console.log("First poll keys:", Object.keys(items[0]));
 //           console.log("First created_at:", items[0]?.created_at);
 //         }
 
-//         setPredictions(items);
+//         setpolls(items);
 //       } catch (err: any) {
-//         console.error('[HomeScreen] Fetch failed:', err);
-//         setError(err.message || 'Failed to load predictions');
-//         toast.error('Could not load predictions');
+//         console.error('[PollScreen] Fetch failed:', err);
+//         setError(err.message || 'Failed to load polls');
+//         toast.error('Could not load polls');
 //       } finally {
 //         setLoading(false);
 //       }
 //     };
 
-//     fetchPredictions();
+//     fetchpolls();
 //   }, []);
 
-//   const filtered = predictions.filter((pred: any) => {
+//   const filtered = polls.filter((pred: any) => {
 //     const matchesCategory =
 //       selectedCategory === 'trending' ||
 //       pred?.field?.fields?.toLowerCase() === selectedCategory.toLowerCase();
@@ -205,7 +205,7 @@
 //   if (loading) {
 //     return (
 //       <div className="min-h-screen flex items-center justify-center">
-//         <p className="text-muted-foreground animate-pulse">Loading predictions...</p>
+//         <p className="text-muted-foreground animate-pulse">Loading polls...</p>
 //       </div>
 //     );
 //   }
@@ -267,13 +267,13 @@
 //               animate={{ opacity: 1, y: 0 }}
 //               transition={{ delay: i * 0.06 }}
 //             >
-//               <PredictionCard prediction={pred} />
+//               <PollCard poll={pred} />
 //             </motion.div>
 //           ))}
 
 //           {filtered.length === 0 && (
 //             <div className="col-span-full text-center py-20 text-muted-foreground">
-//               <p className="text-lg">No predictions found</p>
+//               <p className="text-lg">No polls found</p>
 //               <p className="mt-2">Try changing the category or search term</p>
 //             </div>
 //           )}
@@ -282,7 +282,7 @@
 
 //       {/* Floating create button - mobile */}
 //       <button
-//         onClick={() => navigate('/create')}
+//         onClick={() => navigate('/create-poll')}
 //         className="md:hidden fixed bottom-20 right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-transform hover:scale-110"
 //         style={{
 //           background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
@@ -327,12 +327,12 @@ const defaultCategories = [
 ];
 
 
-export function HomeScreen() {
+export function PollScreen() {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<{ value: string, label: string }[]>(defaultCategories);
   const [selectedCategory, setSelectedCategory] = useState('trending');
   const [searchQuery, setSearchQuery] = useState('');
-  const [predictions, setPredictions] = useState<any[]>([]);
+  const [polls, setpolls] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -354,28 +354,28 @@ export function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    const fetchPredictions = async () => {
+    const fetchpolls = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const rawData = await getAuth('/api/predictions');
+        const rawData = await getAuth('/api/polls');
         const items = Array.isArray(rawData) ? rawData : rawData.data ?? [];
 
-        setPredictions(items);
+        setpolls(items);
       } catch (err: any) {
-        console.error('HomeScreen fetch failed:', err);
-        setError(err.message || 'Failed to load predictions');
-        toast.error('Could not load predictions');
+        console.error('PollScreen fetch failed:', err);
+        setError(err.message || 'Failed to load polls');
+        toast.error('Could not load polls');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPredictions();
+    fetchpolls();
   }, []);
 
-  const filteredPredictions = predictions.filter((pred) => {
+  const filteredpolls = polls.filter((pred) => {
     const categoryMatch =
       selectedCategory === 'trending' ||
       pred?.field?.fields?.toLowerCase() === selectedCategory.toLowerCase();
@@ -412,10 +412,10 @@ export function HomeScreen() {
           </TabsList>
         </Tabs>
 
-        {/* Predictions Grid */}
+        {/* polls Grid */}
         {loading ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground animate-pulse">Loading predictions...</p>
+            <p className="text-muted-foreground animate-pulse">Loading polls...</p>
           </div>
         ) : error ? (
           <div className="text-center py-12 text-red-400">
@@ -434,20 +434,20 @@ export function HomeScreen() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
-            {filteredPredictions.map((prediction, index) => (
+            {filteredpolls.map((poll, index) => (
               <motion.div
-                key={prediction.id}
+                key={poll.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
               >
-                <PredictionCard prediction={prediction} />
+                <PredictionCard prediction={poll} />
               </motion.div>
             ))}
 
-            {filteredPredictions.length === 0 && (
+            {filteredpolls.length === 0 && (
               <div className="text-center py-12">
-                <p className="text-muted-foreground">No predictions found</p>
+                <p className="text-muted-foreground">No polls found</p>
               </div>
             )}
           </motion.div>
@@ -456,7 +456,7 @@ export function HomeScreen() {
 
       {/* Floating Create Button - Mobile Only */}
       <button
-        onClick={() => navigate('/create')}
+        onClick={() => navigate('/create-poll')}
         className="md:hidden fixed bottom-20 right-6 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl z-40 transition-transform hover:scale-110"
         style={{
           background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',

@@ -11,6 +11,7 @@ class Question extends Model
 
     protected $fillable = [
         'user_id', 'field_id', 'questions', 'options', 'correct_answer', 'ans_type_id', 'start_date', 'end_date', 'visibility',
+        'module_type', 'description', 'location_scope', 'status', 'result', 'subscription_required'
     ];
 
     protected $casts = [
@@ -29,17 +30,18 @@ class Question extends Model
 
     public function answerType()
     {
-        return $this->belongsTo(AnswerType::class, 'ans_type_id');
+        return $this->belongsTo(AnswerType::class , 'ans_type_id');
     }
 
 
 
+    public function answers()
+    {
+        return $this->hasMany(Answer::class);
+    }
 
-public function answers()
-{
-    return $this->hasMany(Answer::class);
-}
-
-
-
+    public function groups()
+    {
+        return $this->belongsToMany(Group::class , 'group_question');
+    }
 }

@@ -354,7 +354,6 @@ import {
   Clock,
   ThumbsUp,
   ThumbsDown,
-  Target,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -394,18 +393,13 @@ export function PredictionCard({ prediction }: PredictionCardProps) {
   const Icon = categoryIcons[categoryKey as keyof typeof categoryIcons] || TrendingUp;
   const categoryColor = categoryColors[categoryKey as keyof typeof categoryColors] || '#a855f7';
 
-  // Placeholder risk (you can add real riskLevel later)
-  const riskLevel = 'medium'; // ← replace with prediction.riskLevel if you add it
-  const riskColor = riskColors[riskLevel as keyof typeof riskColors] || '#fbbf24';
-  const rewardMultiplier = 2.5; // ← placeholder — add real value if available
-
   const timeRemaining = prediction?.end_date
     ? formatDistanceToNow(new Date(prediction.end_date), { addSuffix: true })
     : 'TBD';
 
   // Calculate voting stats from actual database answers if available
-  let agreePercentage = 50;
-  let disagreePercentage = 50;
+  let agreePercentage = 0;
+  let disagreePercentage = 0;
   let totalValidVotes = 0;
 
   if (prediction?.answers && Array.isArray(prediction.answers)) {
@@ -417,21 +411,30 @@ export function PredictionCard({ prediction }: PredictionCardProps) {
       agreePercentage = Math.round((agreeCount / totalValidVotes) * 100);
       disagreePercentage = 100 - agreePercentage;
     }
+  } else if (prediction?.yes_count !== undefined && prediction?.no_count !== undefined) {
+    // Use aggregate counts from the backend if available
+    const agreeCount = prediction.yes_count;
+    const disagreeCount = prediction.no_count;
+    totalValidVotes = agreeCount + disagreeCount;
+
+    if (totalValidVotes > 0) {
+      agreePercentage = Math.round((agreeCount / totalValidVotes) * 100);
+      disagreePercentage = 100 - agreePercentage;
+    }
   } else if (prediction?.answers_count > 0) {
-    // Fallback if answers relation wasn't loaded but count exists
+    // Fallback if neither aggregate counts nor answers relation were loaded
     agreePercentage = 50;
     disagreePercentage = 50;
-  } else {
-    // defaults when no votes yet
-    agreePercentage = 0;
-    disagreePercentage = 0;
   }
 
   return (
     <motion.div
       className="glass-card rounded-2xl p-4 cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
       whileHover={{ scale: 1.02 }}
-      onClick={() => navigate(`/prediction/${prediction.id}`)}
+      onClick={() => {
+        const path = prediction?.module_type === 'poll' ? '/poll' : '/prediction';
+        navigate(`${path}/${prediction.id}`);
+      }}
       style={{
         boxShadow: `0 4px 24px ${categoryColor}15`,
       }}
@@ -452,28 +455,6 @@ export function PredictionCard({ prediction }: PredictionCardProps) {
             {prediction?.field?.fields || 'Unknown'}
           </span>
         </div>
-
-        <div className="flex items-center gap-2">
-          <div
-            className="px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1"
-            style={{
-              backgroundColor: `${riskColor}22`,
-              color: riskColor,
-            }}
-          >
-            <Target size={12} />
-            {riskLevel.toUpperCase()}
-          </div>
-          <span
-            className="px-2 py-1 rounded-md text-xs font-bold"
-            style={{
-              backgroundColor: '#fbbf2422',
-              color: '#fbbf24',
-            }}
-          >
-            {rewardMultiplier}x
-          </span>
-        </div>
       </div>
 
       {/* Prediction Text */}
@@ -488,15 +469,14 @@ export function PredictionCard({ prediction }: PredictionCardProps) {
           <AvatarFallback>{prediction?.user?.name?.[0] || '?'}</AvatarFallback>
         </Avatar>
         <span className="text-sm text-muted-foreground">{prediction?.user?.name || 'Anonymous'}</span>
-        <LevelBadge level={1} size="sm" />
         <span className="text-xs text-muted-foreground ml-auto">
           {/* Placeholder accuracy — replace with real data if available */}
           78.4% accurate
         </span>
       </div>
 
-      {/* Voting Progress (for yes-no type) */}
-      {prediction?.answer_type?.ans_type?.toLowerCase().includes('yes/no') && (
+      {/* Voting Progress (for yes-no type or predictions) */}
+      {(prediction?.answer_type?.ans_type?.toLowerCase().includes('yes/no') || prediction?.module_type === 'prediction') && (
         <div className="mb-3">
           <div className="flex items-center justify-between text-xs mb-1">
             <span className="flex items-center gap-1 text-[#10b981]">

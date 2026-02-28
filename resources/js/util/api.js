@@ -174,7 +174,7 @@
 //     status: response.status,
 //     data: errorData
 //   };
-  
+
 //   throw error;
 // }
 
@@ -246,12 +246,12 @@ export async function verifyOtp(data) {
 }
 
 export async function forgotPassword(email) {
-  return postPublic('/api/forgot-password', { email });
+  return postPublic('/api/auth/forgot-password', { email });
 }
 
 export async function resetPassword(data) {
   // data = { token, email, password, password_confirmation }
-  return postPublic('/api/reset-password', data);
+  return postPublic('/api/auth/reset-password', data);
 }
 
 // ────────────────────────────────────────────────
@@ -348,6 +348,14 @@ export async function postAuth(endpoint, data = {}) {
 
 export async function putAuth(endpoint, data = {}) {
   return requestAuth(endpoint, 'PUT', data);
+}
+
+export async function patchAuth(endpoint, data = {}) {
+  return requestAuth(endpoint, 'PATCH', data);
+}
+
+export async function deleteAuth(endpoint) {
+  return requestAuth(endpoint, 'DELETE');
 }
 
 export async function postFormDataAuth(endpoint, formData) {

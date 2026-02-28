@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, Loader2, ArrowLeft, Mail } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { forgotPassword } from '@/util/api';
 
 export function ForgotPasswordScreen() {
     const navigate = useNavigate();
@@ -22,7 +23,7 @@ export function ForgotPasswordScreen() {
         setIsLoading(true);
 
         try {
-            await axios.post('http://127.0.0.1:8000/api/auth/forgot-password', { email });
+            await forgotPassword(email);
             setMessage("If your email is registered, you will receive a password reset link shortly.");
             toast.success("Reset link sent!");
         } catch (err: any) {

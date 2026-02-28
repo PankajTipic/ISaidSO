@@ -9,7 +9,8 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { useAppDispatch } from '@/app/store/hooks';
 import { checkAuthStatus } from '@/app/modules/auth/authSlice';
-import { postAuth } from '@/util/api';
+import { resetPassword } from '@/util/api';
+import { setTokens, storeUserData } from '@/util/session';
 
 export function ResetPasswordScreen() {
     const navigate = useNavigate();
@@ -42,23 +43,20 @@ export function ResetPasswordScreen() {
         setIsLoading(true);
 
         try {
-            const response = await postAuth('/api/auth/reset-password', {
+            const response = await resetPassword({
                 token,
                 email,
                 password,
                 password_confirmation: passwordConfirmation
             });
 
-            // If backend auto-logs in and returns token (as per issueTokens struct)
-            // { user, access_token, ... }
-            // We should save it and update state.
+            // If backend auto-logs in and returns tokens (as per AuthController.php)
+            const { access_token, refresh_token, expires_in, user } = response;
 
-            const { access_token, user } = response.data;
             if (access_token) {
-                localStorage.setItem('access_token', access_token);
-                // Also update user in local storage if issueTokens returns it
+                setTokens(access_token, refresh_token, expires_in);
                 if (user) {
-                    localStorage.setItem('user', JSON.stringify(user));
+                    storeUserData(user);
                 }
 
                 await dispatch(checkAuthStatus()); // Sync redux state

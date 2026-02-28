@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, Loader2, Eye, EyeOff, Lock } from 'lucide-react';
 
 import { toast } from 'sonner';
+import { host } from '@/util/constants';
 
 export default function LoginScreen() {
     const [isRegister, setIsRegister] = useState(false);
@@ -16,6 +17,8 @@ export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [passwordConfirmation, setPasswordConfirmation] = useState('');
+    const [country, setCountry] = useState('');
+    const [city, setCity] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
     // Local error state for shake effect
@@ -25,43 +28,70 @@ export default function LoginScreen() {
 
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const { isLoading, isError, message, isAuthenticated, user } = useAppSelector((state) => state.auth);
 
-   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-
-    const error = params.get('error');
-    const msg = params.get('message');
-    const access = params.get('access_token');
-    const refresh = params.get('refresh_token');
-
-    if (error) {
-        toast.error(msg || "Google login failed");
-        // optionally set local error state
-    }
-
-    if (access && refresh) {
-        // store tokens (localStorage / redux / context)
-        localStorage.setItem('access_token', access);
-        localStorage.setItem('refresh_token', refresh);
-
-        // then check auth / navigate
-        dispatch(checkAuthStatus());
-        toast.success("Logged in successfully");
-    }
-}, [location.search]);
-
     useEffect(() => {
-        if (isAuthenticated && user) {
-            // Check if profile is completed
-            if (user.is_profile_completed) {
-                navigate('/home');
-            } else {
-                navigate('/profile-setup');
-            }
+        const params = new URLSearchParams(location.search);
+
+        const error = params.get('error');
+        const msg = params.get('message');
+        const access = params.get('access_token');
+        const refresh = params.get('refresh_token');
+
+        if (error) {
+            toast.error(msg || "Google login failed");
+            // optionally set local error state
         }
-    }, [isAuthenticated, user, navigate]);
+
+        if (access && refresh) {
+            // store tokens (localStorage / redux / context)
+            localStorage.setItem('access_token', access);
+            localStorage.setItem('refresh_token', refresh);
+
+            // then check auth / navigate
+            dispatch(checkAuthStatus());
+            toast.success("Logged in successfully");
+        }
+    }, [location.search]);
+
+    // useEffect(() => {
+    //     if (isAuthenticated && user) {
+    //         // Check if profile is completed
+    //         if (user.is_profile_completed) {
+    //             navigate('/home');
+    //         } else {
+    //             navigate('/profile-setup');
+    //         }
+    //     }
+    // }, [isAuthenticated, user, navigate]);
+
+ useEffect(() => {
+  if (!isAuthenticated || !user) return;
+
+  console.log("Auth changed → user:", user);              // ← keep temporarily for debugging
+  console.log("Role:", user.role, " | is_profile_completed:", user.is_profile_completed);
+
+  // Priority 1: Profile must be completed
+  if (!user.is_profile_completed) {
+    navigate('/profile-setup', { replace: true });
+    return;
+  }
+
+  // Priority 2: Role-based redirection
+  const roleLower = (user.role || '').toLowerCase().trim();
+  const isAdmin = roleLower === 'admin';
+
+  if (isAdmin) {
+    console.log("→ Redirecting ADMIN to /admin");
+    navigate('/admin', { replace: true });
+  } else {
+    console.log("→ Redirecting normal user to /home");
+    navigate('/home', { replace: true });
+  }
+}, [isAuthenticated, user, navigate]);
+
 
     // Show verification modal on successful registration
     useEffect(() => {
@@ -130,6 +160,18 @@ export default function LoginScreen() {
             isValid = false;
         }
 
+        if (isRegister && !country.trim()) {
+            newErrors.country = 'Country is required';
+            triggerError('country', 'Country is required');
+            isValid = false;
+        }
+
+        if (isRegister && !city.trim()) {
+            newErrors.city = 'City is required';
+            triggerError('city', 'City is required');
+            isValid = false;
+        }
+
         if (isRegister && password !== passwordConfirmation) {
             newErrors.passwordConfirmation = 'Passwords do not match';
             triggerError('passwordConfirmation', 'Passwords do not match');
@@ -146,14 +188,21 @@ export default function LoginScreen() {
         if (!validateForm()) return;
 
         if (isRegister) {
-            dispatch(registerUser({ name, email, password, password_confirmation: passwordConfirmation }));
+            dispatch(registerUser({
+                name,
+                email,
+                password,
+                password_confirmation: passwordConfirmation,
+                country,
+                city
+            }));
         } else {
             dispatch(loginUser({ email, password }));
         }
     };
 
     const handleGoogleLogin = () => {
-        window.location.href = 'http://localhost:8000/api/auth/google';
+        window.location.href = `${host}/api/auth/google`;
     };
 
     const shakeAnimation = (isShaking: boolean) => ({
@@ -180,23 +229,63 @@ export default function LoginScreen() {
                 <div className="bg-zinc-900/50 backdrop-blur-md p-8 rounded-xl border border-zinc-800 shadow-xl">
                     <form className="space-y-6" onSubmit={handleSubmit}>
                         {isRegister && (
-                            <div className="space-y-2">
-                                <Label htmlFor="name" className={errors.name ? 'text-destructive' : 'text-gray-200'}>Full Name</Label>
-                                <motion.div animate={shakeAnimation(shake.name)}>
-                                    <Input
-                                        id="name"
-                                        type="text"
-                                        value={name}
-                                        onChange={(e) => {
-                                            setName(e.target.value);
-                                            if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
-                                        }}
-                                        placeholder="John Doe"
-                                        className={`bg-zinc-800/50 border-zinc-700 text-white placeholder:text-gray-500 focus:border-primary ${errors.name ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                                    />
-                                </motion.div>
-                                {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
-                            </div>
+                            <>
+                                <div className="space-y-2">
+                                    <Label htmlFor="name" className={errors.name ? 'text-destructive' : 'text-gray-200'}>Full Name</Label>
+                                    <motion.div animate={shakeAnimation(shake.name)}>
+                                        <Input
+                                            id="name"
+                                            type="text"
+                                            value={name}
+                                            onChange={(e) => {
+                                                setName(e.target.value);
+                                                if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
+                                            }}
+                                            placeholder="John Doe"
+                                            className={`bg-zinc-800/50 border-zinc-700 text-white placeholder:text-gray-500 focus:border-primary ${errors.name ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                        />
+                                    </motion.div>
+                                    {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="country" className={errors.country ? 'text-destructive' : 'text-gray-200'}>Country</Label>
+                                        <motion.div animate={shakeAnimation(shake.country)}>
+                                            <Input
+                                                id="country"
+                                                type="text"
+                                                value={country}
+                                                onChange={(e) => {
+                                                    setCountry(e.target.value);
+                                                    if (errors.country) setErrors(prev => ({ ...prev, country: '' }));
+                                                }}
+                                                placeholder="USA"
+                                                className={`bg-zinc-800/50 border-zinc-700 text-white placeholder:text-gray-500 focus:border-primary ${errors.country ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                            />
+                                        </motion.div>
+                                        {errors.country && <p className="text-xs text-destructive mt-1">{errors.country}</p>}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="city" className={errors.city ? 'text-destructive' : 'text-gray-200'}>City</Label>
+                                        <motion.div animate={shakeAnimation(shake.city)}>
+                                            <Input
+                                                id="city"
+                                                type="text"
+                                                value={city}
+                                                onChange={(e) => {
+                                                    setCity(e.target.value);
+                                                    if (errors.city) setErrors(prev => ({ ...prev, city: '' }));
+                                                }}
+                                                placeholder="New York"
+                                                className={`bg-zinc-800/50 border-zinc-700 text-white placeholder:text-gray-500 focus:border-primary ${errors.city ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                            />
+                                        </motion.div>
+                                        {errors.city && <p className="text-xs text-destructive mt-1">{errors.city}</p>}
+                                    </div>
+                                </div>
+                            </>
                         )}
 
                         <div className="space-y-2">
@@ -309,7 +398,7 @@ export default function LoginScreen() {
                         </div>
 
                         <a
-                            href="http://localhost:8000/api/auth/google"
+                            href={`${host}/api/auth/google`}
                             className="w-full bg-white hover:bg-gray-200 text-black font-bold flex items-center justify-center border-none h-10 rounded-md transition-colors"
                         >
                             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">

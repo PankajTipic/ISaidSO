@@ -10,7 +10,7 @@ class QuestionController extends Controller
 {
     public function index()
     {
-        return Question::all();
+        return Question::where('module_type', 'question')->get();
     }
 
 
@@ -19,6 +19,9 @@ class QuestionController extends Controller
     {
         return Question::findOrFail($id);
     }
+
+
+
 
 
 
@@ -136,6 +139,7 @@ public function questionsByUserId()
     public function publicIndex()
     {
         $questions = Question::where('visibility', 'public')
+            ->where('module_type', 'question')
             ->with(['field', 'answerType', 'user', 'answers'])
             ->withCount('answers')
             ->latest()

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { host } from '@/util/constants';
 
 interface User {
     id: number;
@@ -23,7 +24,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Configure axios defaults
-axios.defaults.baseURL = 'http://127.0.0.1:8000/api';
+axios.defaults.baseURL = `${host}/api`;
 axios.defaults.withCredentials = true; // Important for SPA sanctum cookie if needed, but we are using token
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -174,7 +175,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     const googleLogin = () => {
-        window.location.href = 'http://127.0.0.1:8000/api/auth/google';
+        window.location.href = `${host}/api/auth/google`;
     };
 
     return (

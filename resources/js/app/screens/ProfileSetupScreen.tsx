@@ -10,6 +10,7 @@ import { checkAuthStatus } from '@/app/modules/auth/authSlice';
 import axios from 'axios';
 import { AvatarSelector } from '@/app/components/AvatarSelector';
 import { avatarOptions } from '@/app/constants/avatarOptions';
+import { getAuth, postFormDataAuth } from '@/util/api';
 
 
 
@@ -21,7 +22,8 @@ export function ProfileSetupScreen() {
     const [username, setUsername] = useState('');
     const [name, setName] = useState(user?.name || '');
     const [email] = useState(user?.email || '');
-    const [country, setCountry] = useState('');
+    const [country, setCountry] = useState(user?.country || '');
+    const [city, setCity] = useState(user?.city || '');
     const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -35,15 +37,13 @@ export function ProfileSetupScreen() {
                 const token = localStorage.getItem('access_token');
                 if (!token) return;
 
-                const response = await axios.get('http://127.0.0.1:8000/api/user', {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
+                const response = await getAuth('/api/user');
 
                 const userData = response.data;
                 // Only set if not already set (to avoid overwriting user input if they navigate back/forth)
                 if (!name && userData.name) setName(userData.name);
+                if (!country && userData.country) setCountry(userData.country);
+                if (!city && userData.city) setCity(userData.city);
                 // Email is driven by state init but let's double check
 
                 // If user has an avatar already, set it
@@ -106,6 +106,7 @@ export function ProfileSetupScreen() {
             formData.append('username', finalUsername);
             formData.append('name', name);
             formData.append('country', country);
+            formData.append('city', city);
 
             if (avatarFile) {
                 formData.append('avatar', avatarFile);
@@ -113,13 +114,7 @@ export function ProfileSetupScreen() {
                 formData.append('avatar', selectedAvatar);
             }
 
-            const token = localStorage.getItem('access_token');
-            await axios.post('http://127.0.0.1:8000/api/profile/update', formData, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
+            await postFormDataAuth('/api/profile/update', formData);
 
             // Refresh user state to update is_profile_completed
             await dispatch(checkAuthStatus());
@@ -171,6 +166,17 @@ export function ProfileSetupScreen() {
                             placeholder="Enter your country"
                             value={country}
                             onChange={(e) => setCountry(e.target.value)}
+                            className="h-12 glass-card"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">City</label>
+                        <Input
+                            type="text"
+                            placeholder="Enter your city"
+                            value={city}
+                            onChange={(e) => setCity(e.target.value)}
                             className="h-12 glass-card"
                         />
                     </div>

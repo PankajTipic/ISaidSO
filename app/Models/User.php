@@ -28,8 +28,11 @@ class User extends Authenticatable
         'login_method',
         'username',
         'country',
+        'city',
         'is_profile_completed',
         'last_login_at',
+        'role',
+        'is_blocked',
     ];
 
     /**
@@ -89,24 +92,40 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_profile_completed' => 'boolean',
+            'is_blocked' => 'boolean',
         ];
     }
 
+    public function isAdmin()
+    {
+        return $this->role === 'admin';
+    }
 
-    public function answers()    {
-        return $this->hasMany(Answer::class);    }
-    public function points()    {
-        return $this->hasMany(Point::class);    }
+
+    public function answers()
+    {
+        return $this->hasMany(Answer::class);
+    }
+    public function points()
+    {
+        return $this->hasMany(Point::class);
+    }
 
     // User.php
-    public function questions()    {
-        return $this->hasMany(Question::class);    }
+    public function questions()
+    {
+        return $this->hasMany(Question::class);
+    }
 
 
-    public function groups()    {
-        return $this->hasMany(Group::class);    }
-    public function joinedGroups()    {
-        return $this->belongsToMany(Group::class);    }
+    public function groups()
+    {
+        return $this->hasMany(Group::class);
+    }
+    public function joinedGroups()
+    {
+        return $this->belongsToMany(Group::class);
+    }
 
 
 

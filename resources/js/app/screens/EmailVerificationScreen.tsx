@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
 import { motion } from 'motion/react';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useAppDispatch } from '@/app/store/hooks';
 import { checkAuthStatus } from '@/app/modules/auth/authSlice';
+import { host } from '@/util/constants';
 
 export function EmailVerificationScreen() {
     const { token } = useParams<{ token: string }>();
@@ -21,11 +21,28 @@ export function EmailVerificationScreen() {
             verificationAttempted.current = true;
 
             try {
-                const response = await axios.get(`http://127.0.0.1:8000/api/auth/verify-email/${token}`);
+                // This is a PUBLIC endpoint — user has no token yet, so we use plain fetch
+                const res = await fetch(`${host}/api/auth/verify-email/${token}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                });
 
-                // Store tokens
-                localStorage.setItem('access_token', response.data.access_token);
-                localStorage.setItem('refresh_token', response.data.refresh_token);
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.error || errData.message || 'Email verification failed. Please try again.');
+                }
+
+                const data = await res.json();
+
+                // Store tokens returned by the verification endpoint
+                if (data.access_token) {
+                    localStorage.setItem('access_token', data.access_token);
+                }
+                if (data.refresh_token) {
+                    localStorage.setItem('refresh_token', data.refresh_token);
+                }
 
                 // Update Redux state
                 await dispatch(checkAuthStatus());
@@ -34,13 +51,13 @@ export function EmailVerificationScreen() {
             } catch (error: any) {
                 setStatus('error');
                 setErrorMessage(
-                    error.response?.data?.error || 'Email verification failed. Please try again.'
+                    error.message || 'Email verification failed. Please try again.'
                 );
             }
         };
 
         verifyEmail();
-    }, [token, dispatch]); // Removed navigate from deps as it's not needed inside effect and stable
+    }, [token, dispatch]);
 
     const handleContinue = () => {
         navigate('/profile-setup');

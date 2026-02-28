@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MobileNav } from '@/app/components/MobileNav';
 import { TopNav } from '@/app/components/TopNav';
 import { Button } from '@/app/components/ui/button';
@@ -11,6 +12,24 @@ import { Users, Plus, Search, Lock, Globe } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
 import { getAuth, postAuth } from '@/util/api';
+import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
+
+interface GroupMember {
+  id: number;
+  name: string;
+  username: string;
+  avatar: string | null;
+}
+
+// interface Group {
+//   id: number;
+//   name: string;
+//   description: string;
+//   memberCount: number;
+//   isPrivate: boolean;
+//   isMember: boolean;
+//   createdAt: string;
+// }
 
 interface Group {
   id: number;
@@ -18,10 +37,13 @@ interface Group {
   description: string;
   memberCount: number;
   isPrivate: boolean;
+  isMember: boolean;
   createdAt: string;
+  isBlocked?: boolean;     // ← add this line
 }
 
 export function GroupsScreen() {
+  const navigate = useNavigate();
   const [selectedTab, setSelectedTab] = useState('discover');
   const [searchQuery, setSearchQuery] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
@@ -31,19 +53,52 @@ export function GroupsScreen() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchGroups = async () => {
+  
+
+
+  // const fetchGroups = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const endpoint = selectedTab === 'my-groups' ? '/api/groups?my_groups=1' : '/api/groups';
+  //     const res = await getAuth(endpoint);
+  //     setGroups(res);
+  //   } catch (error) {
+  //     console.error('Failed to fetch groups', error);
+  //     toast.error('Failed to load groups');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+
+
+
+
+const fetchGroups = async () => {
     try {
-      setLoading(true);
-      const endpoint = selectedTab === 'my-groups' ? '/api/groups?my_groups=1' : '/api/groups';
-      const res = await getAuth(endpoint);
-      setGroups(res);
+        setLoading(true);
+        const endpoint = selectedTab === 'my-groups' 
+            ? '/api/groups?my_groups=1' 
+            : '/api/groups';  // or '/api/groups?discover=1' if backend supports flag
+
+        const res = await getAuth(endpoint);
+        
+        // Filter blocked groups only in Discover tab
+        let processedGroups = res;
+        if (selectedTab === 'discover') {
+            processedGroups = res.filter((g: Group) => !g.isBlocked);
+        }
+        
+        setGroups(processedGroups);
     } catch (error) {
-      console.error('Failed to fetch groups', error);
-      toast.error('Failed to load groups');
+        console.error('Failed to fetch groups', error);
+        toast.error('Failed to load groups');
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
+
+
 
   useEffect(() => {
     fetchGroups();
@@ -83,6 +138,10 @@ export function GroupsScreen() {
       const msg = error.data && error.data.message ? error.data.message : 'Failed to join group';
       toast.error(msg);
     }
+  };
+
+  const handleViewGroup = (groupId: number) => {
+    navigate(`/groups/${groupId}`);
   };
 
   const filteredGroups = groups.filter((group) =>
@@ -226,19 +285,21 @@ export function GroupsScreen() {
                             <span>Created {new Date(group.createdAt).toLocaleDateString()}</span>
                           </div>
                         </div>
-                        <Button
-                          onClick={() => handleJoinGroup(group.id, group.name)}
-                          disabled={group.isPrivate}
-                          size="sm"
-                          className="px-6"
-                          style={{
-                            background: group.isPrivate
-                              ? undefined
-                              : 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-                          }}
-                        >
-                          {group.isPrivate ? 'Private' : 'Join'}
-                        </Button>
+                        {!group.isMember && (
+                          <Button
+                            onClick={() => handleJoinGroup(group.id, group.name)}
+                            disabled={group.isPrivate}
+                            size="sm"
+                            className="px-6"
+                            style={{
+                              background: group.isPrivate
+                                ? undefined
+                                : 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
+                            }}
+                          >
+                            {group.isPrivate ? 'Private' : 'Join'}
+                          </Button>
+                        )}
                       </div>
                     </motion.div>
                   ))
@@ -303,7 +364,12 @@ export function GroupsScreen() {
                             <span>Created {new Date(group.createdAt).toLocaleDateString()}</span>
                           </div>
                         </div>
-                        <Button size="sm" variant="outline" className="px-6 glass-card">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="px-6 glass-card"
+                          onClick={() => handleViewGroup(group.id)}
+                        >
                           View
                         </Button>
                       </div>
@@ -315,6 +381,7 @@ export function GroupsScreen() {
           </Tabs>
         </div>
       </div>
+
 
       <MobileNav />
     </div>

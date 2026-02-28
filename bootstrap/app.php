@@ -12,7 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+       
+        $middleware->alias([
+        'admin' => \App\Http\Middleware\CheckIsAdmin::class,
+        // you can add more aliases here later, e.g.
+        // 'verified.user' => \App\Http\Middleware\EnsureUserIsVerified::class,
+    ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

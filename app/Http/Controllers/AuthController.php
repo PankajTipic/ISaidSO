@@ -24,12 +24,16 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
+            'country' => 'required|string|max:255',
+            'city' => 'required|string|max:255',
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'country' => $request->country,
+            'city' => $request->city,
             'login_method' => 'email',
         ]);
 
@@ -47,7 +51,7 @@ class AuthController extends Controller
         ]);
 
         // Send verification email
-        $verificationUrl = env('FRONTEND_URL', 'http://localhost:5173') . '/verify-email/' . $token;
+        $verificationUrl = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/') . '/verify-email/' . $token;
         Mail::to($user->email)->send(new \App\Mail\VerifyEmail($verificationUrl, $user->name));
 
         return response()->json([
@@ -65,18 +69,25 @@ class AuthController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user) {
-             return response()->json([
-                 'message' => 'The provided email is not registered.',
-                 'errors' => ['email' => ['The provided email is not registered.']]
-             ], 422);
+            return response()->json([
+                'message' => 'The provided email is not registered.',
+                'errors' => ['email' => ['The provided email is not registered.']]
+            ], 422);
         }
 
         // Check if email is verified
         if (is_null($user->email_verified_at)) {
-             return response()->json([
-                 'message' => 'Please verify your email address.',
-                 'errors' => ['email' => ['Please check your email to verify your account.']]
-             ], 403);
+            return response()->json([
+                'message' => 'Please verify your email address.',
+                'errors' => ['email' => ['Please check your email to verify your account.']]
+            ], 403);
+        }
+
+        if ($user->is_blocked) {
+            return response()->json([
+                'message' => 'Your account has been blocked by an administrator.',
+                'errors' => ['email' => ['This account is blocked.']]
+            ], 403);
         }
 
         if (!Hash::check($request->password, $user->password)) {
@@ -88,14 +99,14 @@ class AuthController extends Controller
 
         // Check if user previously logged in with Google but is trying password now
         if ($user->login_method === 'google' && !$user->password) {
-             return response()->json([
-                 'message' => 'Please login with Google.',
-                 'errors' => ['email' => ['This account uses Google Login.']]
-             ], 422);
+            return response()->json([
+                'message' => 'Please login with Google.',
+                'errors' => ['email' => ['This account uses Google Login.']]
+            ], 422);
         }
 
         $user->update(['last_login_at' => now()]);
-        
+
         return $this->issueTokens($user, $request);
     }
 
@@ -110,12 +121,12 @@ class AuthController extends Controller
     {
         // Expecting the refresh token in the Authorization header
         // Sanctum will authenticate the user based on the refresh token provided
-        
+
         $user = $request->user();
         $device = $request->header('User-Agent');
-        
+
         Log::info("User {$user->name} refreshed token from device: {$device}. Used Refresh Token.");
-        
+
         // Verify this is actually a refresh token
         if (!$user->currentAccessToken()->can('issue-access-token')) {
             return response()->json(['message' => 'Invalid token type'], 401);
@@ -139,37 +150,39 @@ class AuthController extends Controller
     public function updateProfile(Request $request)
     {
         $request->validate([
-            'username' => 'required|string|unique:users,username,' . $request->user()->id . '|max:20',
+            'username' => 'nullable|string|unique:users,username,' . $request->user()->id . '|max:20',
             'name' => 'nullable|string|max:255',
             'country' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:255',
             'avatar' => 'nullable', // Allow string (URL) or file. Size/type checks handled manually or via conditional rules if needed.
         ]);
 
         $user = $request->user();
-        
+
         // Handle avatar upload (expecting base64 string now if user cropped/selected on frontend)
         if ($request->has('avatar')) {
-             // Use the trait method
-             // Note: The frontend should send 'avatar' as a base64 string if it was modified/uploaded
-             // If usage simply sends the file object via FormData, we need to convert or just support file uploads directly in trait too?
-             // The user explicitly asked to use saveBase64ImageToS3 which takes base64. 
-             // We should check if request avatar is a file or string.
-             
-             if ($request->hasFile('avatar')) {
-                 // Convert file to base64 for the trait (or update trait to support both, but sticking to user request)
-                 $file = $request->file('avatar');
-                 $base64 = 'data:' . $file->getMimeType() . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
-                 $avatarPath = $this->saveBase64ImageToS3($base64, 'avatars');
-                 if ($avatarPath) {
-                     $user->avatar = $avatarPath; // This will trigger the accessor if we have one, or just save path
-                 }
-             } else {
-                 // It might be a base64 string or url string
-                 $avatarPath = $this->saveBase64ImageToS3($request->avatar, 'avatars');
-                 if ($avatarPath) {
-                     $user->avatar = $avatarPath;
-                 }
-             }
+            // Use the trait method
+            // Note: The frontend should send 'avatar' as a base64 string if it was modified/uploaded
+            // If usage simply sends the file object via FormData, we need to convert or just support file uploads directly in trait too?
+            // The user explicitly asked to use saveBase64ImageToS3 which takes base64. 
+            // We should check if request avatar is a file or string.
+
+            if ($request->hasFile('avatar')) {
+                // Convert file to base64 for the trait (or update trait to support both, but sticking to user request)
+                $file = $request->file('avatar');
+                $base64 = 'data:' . $file->getMimeType() . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
+                $avatarPath = $this->saveBase64ImageToS3($base64, 'avatars');
+                if ($avatarPath) {
+                    $user->avatar = $avatarPath; // This will trigger the accessor if we have one, or just save path
+                }
+            }
+            else {
+                // It might be a base64 string or url string
+                $avatarPath = $this->saveBase64ImageToS3($request->avatar, 'avatars');
+                if ($avatarPath) {
+                    $user->avatar = $avatarPath;
+                }
+            }
         }
 
         // Update profile fields
@@ -179,6 +192,9 @@ class AuthController extends Controller
         }
         if ($request->has('country')) {
             $user->country = $request->country;
+        }
+        if ($request->has('city')) {
+            $user->city = $request->city;
         }
         $user->is_profile_completed = 1;
         $user->save();
@@ -228,21 +244,21 @@ class AuthController extends Controller
     private function issueTokens(User $user, Request $request)
     {
         $this->logDevice($user, $request);
-        
+
         $device = $request->header('User-Agent');
         Log::info("User {$user->name} logged in from device: {$device}");
 
-        // Access Token: 3 minutes
-        $accessToken = $user->createToken('access_token', ['access-api'], now()->addMinutes(3));
-        
-        // Refresh Token: 5 minutes (capability: issue-access-token)
-        $refreshToken = $user->createToken('refresh_token', ['issue-access-token'], now()->addMinutes(20));
+        // Access Token: 7 days
+        $accessToken = $user->createToken('access_token', ['access-api'], now()->addDays(7));
+
+        // Refresh Token: 30 days
+        $refreshToken = $user->createToken('refresh_token', ['issue-access-token'], now()->addDays(30));
 
         return response()->json([
             'user' => $user,
             'access_token' => $accessToken->plainTextToken,
             'refresh_token' => $refreshToken->plainTextToken,
-            'expires_in' => 180, // seconds
+            'expires_in' => 604800, // 7 days in seconds
         ]);
     }
 
@@ -250,25 +266,30 @@ class AuthController extends Controller
     {
         $agent = $request->header('User-Agent');
         $ip = $request->ip();
-        
+
         // Simple device name extraction
         $deviceName = 'Unknown Device';
-        if (str_contains($agent, 'Windows')) $deviceName = 'Windows PC';
-        elseif (str_contains($agent, 'Macintosh')) $deviceName = 'Mac';
-        elseif (str_contains($agent, 'Linux')) $deviceName = 'Linux PC';
-        elseif (str_contains($agent, 'Android')) $deviceName = 'Android Device';
-        elseif (str_contains($agent, 'iPhone')) $deviceName = 'iPhone';
+        if (str_contains($agent, 'Windows'))
+            $deviceName = 'Windows PC';
+        elseif (str_contains($agent, 'Macintosh'))
+            $deviceName = 'Mac';
+        elseif (str_contains($agent, 'Linux'))
+            $deviceName = 'Linux PC';
+        elseif (str_contains($agent, 'Android'))
+            $deviceName = 'Android Device';
+        elseif (str_contains($agent, 'iPhone'))
+            $deviceName = 'iPhone';
 
         DB::table('user_devices')->updateOrInsert(
-            [
-                'user_id' => $user->id,
-                'ip_address' => $ip,
-                'device_name' => $deviceName
-            ],
-            [
-                'last_active_at' => now(),
-                'updated_at' => now()
-            ]
+        [
+            'user_id' => $user->id,
+            'ip_address' => $ip,
+            'device_name' => $deviceName
+        ],
+        [
+            'last_active_at' => now(),
+            'updated_at' => now()
+        ]
         );
     }
 
@@ -278,7 +299,7 @@ class AuthController extends Controller
         return Socialite::driver('google')->stateless()->redirect();
     }
 
-    
+
 
 
 
@@ -293,18 +314,18 @@ class AuthController extends Controller
     //             ->setHttpClient(new \GuzzleHttp\Client(['verify' => false]))
     //             ->stateless()
     //             ->user();
-            
+
     //         $user = User::where('email', $googleUser->getEmail())->first();
 
     //         if (!$user) {
     //             // Determine username from email part or name
     //             $baseUsername = explode('@', $googleUser->getEmail())[0];
     //             $username = Str::substr($baseUsername, 0, 20);
-                
+
     //             // Ensure unique username
     //             // ... (existing logic handled by create?)
     //             // Actually we just create user here
-                
+
     //             $user = User::create([
     //                 'name' => $googleUser->getName(),
     //                 'email' => $googleUser->getEmail(),
@@ -330,11 +351,11 @@ class AuthController extends Controller
     //                  }
     //              }
     //         }
-            
+
     //         // For OAuth callback, we usually return a view that sends message to opener or redirects with token in URL
     //         // Since this is an API, we probably need a frontend route to handle the callback code, 
     //         // OR this endpoint returns a redirect to the frontend with tokens in query params.
-            
+
     //         // Simulating issueTokens logic for redirect
     //         $this->logDevice($user, request());
     //         $accessToken = $user->createToken('access_token', ['access-api'], now()->addMinutes(3));
@@ -347,10 +368,9 @@ class AuthController extends Controller
     //         return response()->json(['error' => 'Google Login Failed', 'message' => $e->getMessage()], 500);
     //     }
     // }
-
-public function handleGoogleCallback()
+    public function handleGoogleCallback()
     {
-        \Log::info('Google callback received', [
+        Log::info('Google callback received', [
             'full_url' => request()->fullUrl(),
             'query_params' => request()->query(),
             'has_code' => request()->has('code'),
@@ -363,47 +383,45 @@ public function handleGoogleCallback()
             $googleUser = Socialite::driver('google')->stateless()->user();
 
             $user = User::updateOrCreate(
-                ['email' => $googleUser->getEmail()],
-                [
-                    'name'       => $googleUser->getName(),
-                    'google_id'  => $googleUser->getId(),
-                    'avatar'     => $googleUser->getAvatar(),
-                    'password'   => bcrypt(Str::random(16)), // dummy password
-                    'login_method' => 'google',
-                    'email_verified_at' => now(),
-                ]
+            ['email' => $googleUser->getEmail()],
+            [
+                'name' => $googleUser->getName(),
+                'google_id' => $googleUser->getId(),
+                'avatar' => $googleUser->getAvatar(),
+                'password' => bcrypt(Str::random(16)), // dummy password
+                'login_method' => 'google',
+                'email_verified_at' => now(),
+            ]
             );
 
             // Log device
             $this->logDevice($user, request());
 
             // Create tokens
-            $accessToken = $user->createToken('access_token', ['access-api'], now()->addMinutes(3));
-            $refreshToken = $user->createToken('refresh_token', ['issue-access-token'], now()->addMinutes(5));
+            $accessToken = $user->createToken('access_token', ['access-api'], now()->addDays(7));
+            $refreshToken = $user->createToken('refresh_token', ['issue-access-token'], now()->addDays(30));
 
             // $redirectUrl = env('FRONTEND_URL') . '/login'  // ← Change to valid frontend path (e.g., /login)
             //     . '?access_token='    . $accessToken->plainTextToken
             //     . '&refresh_token='   . $refreshToken->plainTextToken
-            //     . '&expires_in=180';
+            //     . '&expires_in=604800';
 
             // return redirect($redirectUrl);
 
-            return redirect(env('FRONTEND_URL') . '/auth'
-    . '?access_token=' . $accessToken->plainTextToken
-    . '&refresh_token=' . $refreshToken->plainTextToken
-    . '&expires_in=180');
+            return redirect(rtrim(env('FRONTEND_URL'), '/') . '/auth'
+                . '?access_token=' . $accessToken->plainTextToken
+                . '&refresh_token=' . $refreshToken->plainTextToken
+                . '&expires_in=604800');
 
-// Error case
-return redirect(env('FRONTEND_URL') . '/auth?error=google_login_failed&message=' . urlencode($e->getMessage()));
-
-        } catch (\Exception $e) {
-            \Log::error('Google callback failed', [
+        }
+        catch (\Exception $e) {
+            Log::error('Google callback failed', [
                 'exception' => $e->getMessage(),
                 'query' => request()->query()->all(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return redirect(env('FRONTEND_URL') . '/login?error=google_login_failed&message=' . urlencode($e->getMessage()));  // ← Change to valid frontend path
+            return redirect(rtrim(env('FRONTEND_URL'), '/') . '/login?error=google_login_failed&message=' . urlencode($e->getMessage())); // ← Change to valid frontend path
         }
     }
 
@@ -421,7 +439,7 @@ return redirect(env('FRONTEND_URL') . '/auth?error=google_login_failed&message='
         if (empty($baseUsername)) {
             $baseUsername = 'user';
         }
-        
+
         // Limit to 20 chars minus some buffer for numbers
         $baseUsername = substr($baseUsername, 0, 15);
 
@@ -436,7 +454,7 @@ return redirect(env('FRONTEND_URL') . '/auth?error=google_login_failed&message='
         return $username;
     }
 
-    public function forgotPassword(Request $request) 
+    public function forgotPassword(Request $request)
     {
         $request->validate(['email' => 'required|email']);
 
@@ -462,11 +480,12 @@ return redirect(env('FRONTEND_URL') . '/auth?error=google_login_failed&message='
 
         // Send Email
         // Frontend URL: /reset-password?token=...&email=...
-        $resetUrl = env('FRONTEND_URL', 'http://localhost:5173') . '/reset-password?token=' . $token . '&email=' . urlencode($request->email);
-        
+        $resetUrl = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/') . '/reset-password?token=' . $token . '&email=' . urlencode($request->email);
+
         try {
             Mail::to($request->email)->send(new \App\Mail\PasswordReset($resetUrl));
-        } catch (\Exception $e) {
+        }
+        catch (\Exception $e) {
             Log::error("Failed to send password reset email: " . $e->getMessage());
             return response()->json(['message' => 'Failed to send email. Please try again later.'], 500);
         }
@@ -491,7 +510,7 @@ return redirect(env('FRONTEND_URL') . '/auth?error=google_login_failed&message='
             ->first();
 
         if (!$record) {
-             return response()->json(['message' => 'Invalid token.'], 400);
+            return response()->json(['message' => 'Invalid token.'], 400);
         }
 
         // Check expiration (assuming created_at is timestamp)
@@ -504,7 +523,7 @@ return redirect(env('FRONTEND_URL') . '/auth?error=google_login_failed&message='
         // Update User Password
         $user = User::where('email', $request->email)->first();
         if (!$user) {
-             return response()->json(['message' => 'User not found.'], 404);
+            return response()->json(['message' => 'User not found.'], 404);
         }
 
         $user->password = Hash::make($request->password);
@@ -515,7 +534,7 @@ return redirect(env('FRONTEND_URL') . '/auth?error=google_login_failed&message='
 
         // Auto login the user? Request asks: "he can set the passwrod on that page and he will get automatically redirect to home screen if the profiel is completed"
         // This implies we should issue tokens and log them in.
-        
+
         return $this->issueTokens($user, $request);
     }
 
@@ -527,34 +546,79 @@ return redirect(env('FRONTEND_URL') . '/auth?error=google_login_failed&message='
 
 
 
+    public function profile()
+    {
+        $user = Auth::user();
 
-public function profile()
-{
-    $user = Auth::user();
+        // Load all related data
+        $user->load([
+            'questions.answers', // questions with answers
+            'answers.question', // answers with question
+            'points',
+            'groups'
+        ]);
 
-    // Load all related data
-    $user->load([
-        'questions.answers',   // questions with answers
-        'answers.question',    // answers with question
-        'points',
-        'groups'
-    ]);
+        // Extra summary (optional but useful)
+        $summary = [
+            'total_questions' => $user->questions->count(),
+            'total_answers' => $user->answers->count(),
+            'total_points' => $user->points->sum('points'),
+            'groups_joined' => $user->groups->count(),
+        ];
 
-    // Extra summary (optional but useful)
-    $summary = [
-        'total_questions' => $user->questions->count(),
-        'total_answers'   => $user->answers->count(),
-        'total_points'    => $user->points->sum('points'), // change column if needed
-        'groups_joined'   => $user->groups->count(),
-    ];
+        // Badges calculation
+        $badges = [];
+        $badges[] = [
+            'id' => 'welcome',
+            'name' => 'Welcome Aboard',
+            'icon' => '👋',
+            'description' => 'Joined the I Said So community'
+        ];
 
-    return response()->json([
-        'status'  => true,
-        'message' => 'User profile fetched successfully',
-        'user'    => $user,
-        'summary' => $summary
-    ]);
-}
+        if ($summary['total_questions'] > 0) {
+            $badges[] = [
+                'id' => 'creator',
+                'name' => 'Curious Creator',
+                'icon' => '💡',
+                'description' => 'Created your first question'
+            ];
+        }
+
+        if ($summary['total_answers'] >= 5) {
+            $badges[] = [
+                'id' => 'predictor',
+                'name' => 'Master Predictor',
+                'icon' => '🔮',
+                'description' => 'Answered 5 or more questions'
+            ];
+        }
+
+        if ($summary['total_points'] >= 100) {
+            $badges[] = [
+                'id' => 'high_scorer',
+                'name' => 'High Scorer',
+                'icon' => '🏆',
+                'description' => 'Earned over 100 points'
+            ];
+        }
+
+        if ($summary['groups_joined'] >= 3) {
+            $badges[] = [
+                'id' => 'social_butterfly',
+                'name' => 'Social Butterfly',
+                'icon' => '🦋',
+                'description' => 'Joined 3 or more groups'
+            ];
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'User profile fetched successfully',
+            'user' => $user,
+            'summary' => $summary,
+            'badges' => $badges,
+        ]);
+    }
 
 
 

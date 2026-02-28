@@ -434,15 +434,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/app/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Label } from '@/app/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Globe, Flag, MapPin, Check, CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { TopNav } from '@/app/components/TopNav';
 import { MobileNav } from '@/app/components/MobileNav';
 
-// Import your API helpers (adjust alias/path based on your vite.config.ts)
+// Import your API helpers
 import { getAuth, postAuth } from '@/util/api';
 
 // ────────────────────────────────────────────────
@@ -467,6 +468,11 @@ const ANSWER_TYPE_MAP: Record<AnswerType, string> = {
   datetime: 'DateTime',
 };
 
+interface MyGroup {
+  id: number;
+  name: string;
+}
+
 // ────────────────────────────────────────────────
 // Component
 // ────────────────────────────────────────────────
@@ -474,12 +480,20 @@ export function CreatePredictionScreen() {
   const navigate = useNavigate();
 
   // Form state
+  const [activeTab, setActiveTab] = useState('prediction');
   const [text, setText] = useState('');
+  const [description, setDescription] = useState('');
+  const [locationScope, setLocationScope] = useState<'global' | 'country' | 'city'>('global');
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [answerType, setAnswerType] = useState<AnswerType>('yes-no');
   const [mcqOptions, setMcqOptions] = useState<string[]>(['', '']);
   const [correctAnswer, setCorrectAnswer] = useState('');
+  const [pollCorrectAnswer, setPollCorrectAnswer] = useState('');
   const [votingEndDate, setVotingEndDate] = useState('');
+
+  // Poll specific state
+  const [pollOptions, setPollOptions] = useState<string[]>(['', '', '']);
+  const [submitting, setSubmitting] = useState(false);
 
   // Reference data
   const [fields, setFields] = useState<Field[]>([]);
@@ -492,22 +506,29 @@ export function CreatePredictionScreen() {
   const [newFieldName, setNewFieldName] = useState('');
   const [isAddingField, setIsAddingField] = useState(false);
 
+  // Group sharing state
+  const [myGroups, setMyGroups] = useState<MyGroup[]>([]);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
+
   // ── Load reference data (protected endpoints) ─────────────
   useEffect(() => {
     const loadReferenceData = async () => {
       try {
         setLoadingRefs(true);
 
-        const [fieldsRes, typesRes] = await Promise.all([
+        const [fieldsRes, typesRes, groupsRes] = await Promise.all([
           getAuth('/api/fields'),
           getAuth('/api/answer-types'),
+          getAuth('/api/groups?my_groups=1'),
         ]);
 
         const fieldData = fieldsRes?.data ?? fieldsRes ?? [];
         const typeData = typesRes?.data ?? typesRes ?? [];
+        const groupData = groupsRes?.data ?? groupsRes ?? [];
 
         setFields(fieldData);
         setAnswerTypes(typeData);
+        setMyGroups(groupData);
 
         if (fieldData.length > 0) {
           setSelectedFieldId(fieldData[0].id);
@@ -560,6 +581,26 @@ export function CreatePredictionScreen() {
     setMcqOptions(updated);
   };
 
+  const handleAddPollOption = () => {
+    if (pollOptions.length < 6) setPollOptions([...pollOptions, '']);
+  };
+
+  const handleRemovePollOption = (index: number) => {
+    if (pollOptions.length > 2) setPollOptions(pollOptions.filter((_, i) => i !== index));
+  };
+
+  const handlePollOptionChange = (index: number, value: string) => {
+    const updated = [...pollOptions];
+    updated[index] = value;
+    setPollOptions(updated);
+  };
+
+  const toggleGroupSelection = (id: number) => {
+    setSelectedGroupIds(prev =>
+      prev.includes(id) ? prev.filter(gid => gid !== id) : [...prev, id]
+    );
+  };
+
   const handleAddField = async () => {
     if (!newFieldName.trim()) return toast.error('Please enter a category name');
     try {
@@ -581,59 +622,77 @@ export function CreatePredictionScreen() {
     }
   };
 
+  const handlePublishPoll = async () => {
+    if (!text.trim()) return toast.error('Please enter a poll question');
+    if (selectedFieldId === null) return toast.error('Please select a category');
+    if (!votingEndDate) return toast.error('Please set voting end date');
+
+    const validOptions = pollOptions.filter(o => o.trim());
+    if (validOptions.length < 2) return toast.error('At least 2 poll options required');
+
+    const payload = {
+      field_id: selectedFieldId,
+      questions: text.trim(),
+      options: validOptions,
+      correct_answer: pollCorrectAnswer || 'N/A',
+      visibility,
+      end_date: formatToMySQLDateTime(votingEndDate),
+      group_ids: selectedGroupIds,
+    };
+
+    try {
+      setSubmitting(true);
+      await postAuth('/api/polls', payload);
+      toast.success('Poll created successfully!');
+      setTimeout(() => navigate('/polls'), 900);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create poll');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handlePublish = async () => {
-    // Validation
+    if (activeTab === 'poll') {
+      return handlePublishPoll();
+    }
+
+    // Prediction Validation
     if (!text.trim()) return toast.error('Please write your prediction');
     if (selectedFieldId === null) return toast.error('Please select a category');
     if (!votingEndDate) return toast.error('Please set voting end date');
     if (!correctAnswer.trim()) return toast.error('Please provide the correct answer');
 
-    if (answerType === 'mcq') {
-      const validOptions = mcqOptions.filter(o => o.trim());
-      if (validOptions.length < 2) return toast.error('At least 2 valid options required');
-      if (!validOptions.includes(correctAnswer.trim())) {
-        return toast.error('Correct answer must match one of the options exactly');
-      }
-    }
-
     const endDate = new Date(votingEndDate);
     if (endDate <= new Date()) return toast.error('Voting end date must be in the future');
 
-    const selectedType = answerTypes.find(t => t.ans_type === ANSWER_TYPE_MAP[answerType]);
-    if (!selectedType) return toast.error('Selected answer type not found');
+    const selectedType = answerTypes.find(t => t.ans_type === 'Yes/No');
+    if (!selectedType) return toast.error('Standard answer type "Yes/No" not found');
 
     const payload: Record<string, any> = {
       field_id: selectedFieldId,
       questions: text.trim(),
+      description: description.trim() || null,
+      location_scope: locationScope,
       ans_type_id: selectedType.id,
       correct_answer: correctAnswer.trim(),
       visibility,
       start_date: formatToMySQLDateTime(new Date().toISOString().slice(0, 16)),
       end_date: formatToMySQLDateTime(votingEndDate),
+      options: ['Yes', 'No'],
+      group_ids: selectedGroupIds,
     };
 
-    if (answerType === 'mcq') {
-      payload.options = mcqOptions.filter(o => o.trim());
-    }
-
-    console.log('Sending payload:', payload);
-
     try {
-      await postAuth('/api/questions', payload);
+      setSubmitting(true);
+      await postAuth('/api/predictions', payload);
       toast.success('Prediction created successfully!');
       setTimeout(() => navigate('/home'), 900);
     } catch (err: any) {
       console.error('Publish failed:', err);
-      let message = err.message || 'Failed to create prediction';
-
-      if (err.status === 401) {
-        message = 'Session expired. Please log in again.';
-        // You can also call logout() here if you want
-      } else if (err.response?.data?.message) {
-        message = err.response.data.message;
-      }
-
-      toast.error(message);
+      toast.error(err.message || 'Failed to create prediction');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -674,227 +733,351 @@ export function CreatePredictionScreen() {
           transition={{ duration: 0.5 }}
         >
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Create Prediction</h1>
+            <h1 className="text-3xl font-bold mb-2">Create New Content</h1>
             <p className="text-muted-foreground">
-              Make a bold claim. Set the timeline. Let the world vote.
+              Share your thoughts or ask the community what they think.
             </p>
           </div>
 
-          {/* Category */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Category</Label>
-              <Dialog open={isFieldModalOpen} onOpenChange={setIsFieldModalOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7 text-xs px-2 glass-card border flex items-center">
-                    <Plus size={14} className="mr-1" /> Add Category
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="glass-card sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Add New Category</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 mt-4">
-                    <div className="space-y-2">
-                      <Label>Category Name</Label>
-                      <Input
-                        placeholder="e.g. Technology, Sports..."
-                        value={newFieldName}
-                        onChange={(e) => setNewFieldName(e.target.value)}
-                        className="glass-card"
-                      />
-                    </div>
-                    <Button
-                      className="w-full"
-                      onClick={handleAddField}
-                      disabled={isAddingField}
-                      style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
-                    >
-                      {isAddingField ? 'Adding...' : 'Add Category'}
-                    </Button>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-8 glass-card border p-1 rounded-2xl h-14">
+              <TabsTrigger value="prediction" className="rounded-xl h-full text-base">Predictions</TabsTrigger>
+              <TabsTrigger value="poll" className="rounded-xl h-full text-base">Polls</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="prediction" className="space-y-7 focus:outline-none">
+              {/* Prediction Specific Content */}
+              <div className="glass-card rounded-3xl border border-white/5 p-6 md:p-8 space-y-7 shadow-2xl">
+                {/* Category Picker */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold ml-1">Category</Label>
+                    <Dialog open={isFieldModalOpen} onOpenChange={setIsFieldModalOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-8 glass-card border border-white/10 hover:bg-white/5">
+                          <Plus size={14} className="mr-1.5" /> Add Category
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="glass-card border border-white/10">
+                        <DialogHeader>
+                          <DialogTitle>Add New Category</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <Input
+                            placeholder="e.g. Technology, Sports..."
+                            value={newFieldName}
+                            onChange={(e) => setNewFieldName(e.target.value)}
+                            className="glass-card border-white/10"
+                          />
+                          <Button
+                            className="w-full"
+                            onClick={handleAddField}
+                            disabled={isAddingField}
+                            style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
+                          >
+                            {isAddingField ? 'Adding...' : 'Add Category'}
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-            <Select
-              value={selectedFieldId?.toString() ?? ''}
-              onValueChange={v => setSelectedFieldId(Number(v))}
-            >
-              <SelectTrigger className="glass-card">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {fields.map(f => (
-                  <SelectItem key={f.id} value={f.id.toString()}>
-                    {f.fields}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                  <Select value={selectedFieldId?.toString() ?? ''} onValueChange={v => setSelectedFieldId(Number(v))}>
+                    <SelectTrigger className="glass-card border-white/10 h-12">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent className="glass-card border-white/10">
+                      {fields.map(f => (
+                        <SelectItem key={f.id} value={f.id.toString()}>{f.fields}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          {/* Prediction Text */}
-          <div className="space-y-2">
-            <Label>Prediction</Label>
-            <Textarea
-              placeholder="What do you predict will happen?"
-              value={text}
-              onChange={e => setText(e.target.value)}
-              className="glass-card min-h-28 resize-none"
-              maxLength={500}
-            />
-            <p className="text-xs text-muted-foreground text-right">
-              {text.length}/500
-            </p>
-          </div>
+                {/* Question */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold ml-1">Your Prediction</Label>
+                  <Textarea
+                    placeholder="What do you predict will happen?"
+                    value={text}
+                    onChange={e => setText(e.target.value)}
+                    className="glass-card border-white/10 min-h-32 p-4 text-lg"
+                    maxLength={500}
+                  />
+                  <div className="flex justify-end pr-1">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{text.length}/500</span>
+                  </div>
+                </div>
 
-          {/* Visibility */}
-          <div className="space-y-2">
-            <Label>Visibility</Label>
-            <RadioGroup
-              value={visibility}
-              onValueChange={v => setVisibility(v as 'public' | 'private')}
-              className="flex gap-6"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="public" id="public" />
-                <Label htmlFor="public" className="cursor-pointer">Public</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="private" id="private" />
-                <Label htmlFor="private" className="cursor-pointer">Private</Label>
-              </div>
-            </RadioGroup>
-          </div>
+                {/* Description */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold ml-1">Description <span className="text-white/30">(optional)</span></Label>
+                  <Textarea
+                    placeholder="Add context or evidence for your prediction..."
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    className="glass-card border-white/10 min-h-24 p-4"
+                  />
+                </div>
 
-          {/* Voting End Date */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-2">
-              <Label>Voting Ends</Label>
-              <Input
-                type="datetime-local"
-                value={votingEndDate}
-                onChange={e => setVotingEndDate(e.target.value)}
-                className="glass-card"
-                min={new Date().toISOString().slice(0, 16)}
-              />
-            </div>
-            {/* Uncomment if you decide to use result publish date */}
-            {/* <div className="space-y-2">
-              <Label>Result Publish (optional)</Label>
-              <Input type="datetime-local" className="glass-card" />
-            </div> */}
-          </div>
+                {/* Additional Settings */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold ml-1">Location Scope</Label>
+                    <Select
+                      value={locationScope}
+                      onValueChange={v => setLocationScope(v as any)}
+                    >
+                      <SelectTrigger className="glass-card border-white/10 h-12">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="glass-card border-white/10">
+                        <SelectItem value="global"><div className="flex items-center gap-2"><Globe size={14} className="text-blue-400" /> Global</div></SelectItem>
+                        <SelectItem value="country"><div className="flex items-center gap-2"><Flag size={14} className="text-red-400" /> Country</div></SelectItem>
+                        <SelectItem value="city"><div className="flex items-center gap-2"><MapPin size={14} className="text-green-400" /> City</div></SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <RadioGroup
+                      value={visibility}
+                      onValueChange={v => setVisibility(v as any)}
+                      className="flex h-12 gap-6 items-center"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="public" id="p-public" />
+                        <Label htmlFor="p-public" className="cursor-pointer">Public</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="private" id="p-private" />
+                        <Label htmlFor="p-private" className="cursor-pointer">Private</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                </div>
 
-          {/* Answer Type */}
-          <div className="space-y-2">
-            <Label>Answer Type</Label>
-            <Select
-              value={answerType}
-              onValueChange={v => {
-                setAnswerType(v as AnswerType);
-                setMcqOptions(['', '']);
-                setCorrectAnswer('');
-              }}
-            >
-              <SelectTrigger className="glass-card">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="yes-no">Yes / No</SelectItem>
-                <SelectItem value="mcq">Multiple Choice</SelectItem>
-                <SelectItem value="numeric">Numeric Value</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+                {/* Group Selection for Private Predictions */}
+                {visibility === 'private' && myGroups.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="space-y-3 pt-2"
+                  >
+                    <Label className="text-sm font-semibold ml-1">Share with Groups (Optional)</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {myGroups.map(group => (
+                        <button
+                          key={group.id}
+                          type="button"
+                          onClick={() => toggleGroupSelection(group.id)}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all truncate max-w-[200px] ${selectedGroupIds.includes(group.id)
+                            ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(168,85,247,0.2)]'
+                            : 'bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10'
+                            }`}
+                        >
+                          <span className="truncate">{group.name}</span>
+                          {selectedGroupIds.includes(group.id) && <Check size={14} />}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground ml-1">Members of these groups will be able to see this private prediction.</p>
+                  </motion.div>
+                )}
 
-          {/* Correct Answer */}
-          <div className="space-y-2">
-            <Label>Correct Answer (for scoring)</Label>
+                {/* Timing */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold ml-1">Due Date (Voting Ends)</Label>
+                    <Input
+                      type="datetime-local"
+                      value={votingEndDate}
+                      onChange={e => setVotingEndDate(e.target.value)}
+                       className="glass-card border-white/10 h-12 text-white 
+             [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert 
+             [&::-webkit-calendar-picker-indicator]:brightness-0 
+             [&::-webkit-calendar-picker-indicator]:hue-rotate(180deg)"
+                      min={new Date().toISOString().slice(0, 16)}
+                    />
+                    
+                  </div>
+                </div>
 
-            {answerType === 'yes-no' && (
-              <Select value={correctAnswer} onValueChange={setCorrectAnswer}>
-                <SelectTrigger className="glass-card">
-                  <SelectValue placeholder="Choose correct answer" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Yes">Yes</SelectItem>
-                  <SelectItem value="No">No</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
 
-            {answerType === 'mcq' && (
-              <Input
-                placeholder="Type correct option exactly"
-                value={correctAnswer}
-                onChange={e => setCorrectAnswer(e.target.value)}
-                className="glass-card"
-              />
-            )}
 
-            {answerType === 'numeric' && (
-              <Input
-                type="number"
-                step="any"
-                placeholder="e.g. 42 or 3.14"
-                value={correctAnswer}
-                onChange={e => setCorrectAnswer(e.target.value)}
-                className="glass-card"
-              />
-            )}
-          </div>
+                {/* Correct Answer */}
+                <div className="space-y-2 pt-2 border-t border-white/5 mt-4">
+                  <Label className="text-sm font-semibold ml-1">Correct Answer (Expected Outcome)</Label>
+                  <Select value={correctAnswer} onValueChange={setCorrectAnswer}>
+                    <SelectTrigger className="glass-card border-white/10 h-12">
+                      <SelectValue placeholder="Choose expected result" />
+                    </SelectTrigger>
+                    <SelectContent className="glass-card">
+                      <SelectItem value="Yes">Yes (Achieved)</SelectItem>
+                      <SelectItem value="No">No (Not Achieved)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          {/* MCQ Options */}
-          {answerType === 'mcq' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label>Options (2–6)</Label>
+
                 <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddOption}
-                  disabled={mcqOptions.length >= 6}
+                  className="w-full h-14 text-lg font-bold shadow-xl hover:scale-[1.01] transition-transform active:scale-[0.99]"
+                  onClick={handlePublish}
+                  disabled={submitting}
+                  style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
                 >
-                  <Plus size={16} className="mr-1.5" /> Add Option
+                  {submitting ? 'Publishing...' : 'Publish Prediction'}
                 </Button>
               </div>
+            </TabsContent>
 
-              {mcqOptions.map((opt, i) => (
-                <div key={i} className="flex gap-3 items-center">
-                  <Input
-                    value={opt}
-                    onChange={e => handleOptionChange(i, e.target.value)}
-                    placeholder={`Option ${i + 1}`}
-                    className="glass-card flex-1"
-                  />
-                  {mcqOptions.length > 2 && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemoveOption(i)}
-                      className="text-destructive hover:text-destructive/90"
-                    >
-                      <X size={18} />
-                    </Button>
-                  )}
+            <TabsContent value="poll" className="space-y-7 focus:outline-none">
+              <div className="glass-card rounded-3xl border border-white/5 p-6 md:p-8 space-y-7 shadow-2xl">
+                {/* Same Category Picker for Polls */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold ml-1">Category</Label>
+                  <Select value={selectedFieldId?.toString() ?? ''} onValueChange={v => setSelectedFieldId(Number(v))}>
+                    <SelectTrigger className="glass-card border-white/10 h-12">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent className="glass-card font-inter">
+                      {fields.map(f => (
+                        <SelectItem key={f.id} value={f.id.toString()}>{f.fields}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              ))}
-            </div>
-          )}
 
-          {/* Submit */}
-          <Button
-            className="w-full h-12 text-lg font-semibold mt-8"
-            onClick={handlePublish}
-            disabled={loadingRefs}
-            style={{
-              background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-            }}
-          >
-            Publish Prediction
-          </Button>
+                {/* Poll Question */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold ml-1">Poll Question</Label>
+                  <Textarea
+                    placeholder="What would you like to ask?"
+                    value={text}
+                    onChange={e => setText(e.target.value)}
+                    className="glass-card border-white/10 min-h-32 p-4 text-lg"
+                    maxLength={500}
+                  />
+                  <div className="flex justify-end pr-1">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{text.length}/500</span>
+                  </div>
+                </div>
+
+                {/* Poll Options */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-sm font-semibold">Options (2–6)</Label>
+                    <Button variant="outline" size="sm" onClick={handleAddPollOption} disabled={pollOptions.length >= 6}>
+                      <Plus size={14} className="mr-1.5" /> Add
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3">
+                    {pollOptions.map((opt, i) => (
+                      <div key={i} className="flex gap-2">
+                        <Input
+                          value={opt}
+                          onChange={e => handlePollOptionChange(i, e.target.value)}
+                          placeholder={`Option ${i + 1}`}
+                          className="glass-card border-white/10 h-11"
+                        />
+                        {pollOptions.length > 2 && (
+                          <Button variant="ghost" size="icon" onClick={() => handleRemovePollOption(i)} className="text-red-400">
+                            <X size={18} />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Correct Answer for Poll */}
+                <div className="space-y-2 pt-2 border-t border-white/5 mt-4">
+                  <Label className="text-sm font-semibold ml-1">Correct Answer (Optional Rewards)</Label>
+                  <Select value={pollCorrectAnswer} onValueChange={setPollCorrectAnswer}>
+                    <SelectTrigger className="glass-card border-white/10 h-12">
+                      <SelectValue placeholder="Identify the correct result" />
+                    </SelectTrigger>
+                    <SelectContent className="glass-card">
+                      {pollOptions.filter(opt => opt.trim()).map((opt, i) => (
+                        <SelectItem key={i} value={opt.trim()}>{opt.trim()}</SelectItem>
+                      ))}
+                      <SelectItem value="N/A">None / General Opinion</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground ml-1">Correct voters will earn 10 points when the poll is resolved.</p>
+                </div>
+
+                {/* Timing & Visibility */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold ml-1">Due Date (Voting Ends)</Label>
+                    <Input
+                      type="datetime-local"
+                      value={votingEndDate}
+                      onChange={e => setVotingEndDate(e.target.value)}
+                      className="glass-card border-white/10 h-12 text-white 
+             [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert 
+             [&::-webkit-calendar-picker-indicator]:brightness-0 
+             [&::-webkit-calendar-picker-indicator]:hue-rotate(180deg)"
+                      min={new Date().toISOString().slice(0, 16)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold ml-1">Visibility</Label>
+                    <RadioGroup
+                      value={visibility}
+                      onValueChange={v => setVisibility(v as any)}
+                      className="flex h-12 gap-6 items-center"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="public" id="poll-public" />
+                        <Label htmlFor="poll-public" className="cursor-pointer">Public</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="private" id="poll-private" />
+                        <Label htmlFor="poll-private" className="cursor-pointer">Private</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                </div>
+
+                {/* Group Selection for Private Polls */}
+                {visibility === 'private' && myGroups.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="space-y-3 pt-2"
+                  >
+                    <Label className="text-sm font-semibold ml-1">Share with Groups (Optional)</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {myGroups.map(group => (
+                        <button
+                          key={group.id}
+                          type="button"
+                          onClick={() => toggleGroupSelection(group.id)}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all truncate max-w-[200px] ${selectedGroupIds.includes(group.id)
+                            ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(168,85,247,0.2)]'
+                            : 'bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10'
+                            }`}
+                        >
+                          <span className="truncate">{group.name}</span>
+                          {selectedGroupIds.includes(group.id) && <Check size={14} />}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground ml-1">Members of these groups will be able to see this private poll.</p>
+                  </motion.div>
+                )}
+
+                <Button
+                  className="w-full h-14 text-lg font-bold shadow-xl hover:scale-[1.01] transition-transform active:scale-[0.99] mt-4"
+                  onClick={handlePublish}
+                  disabled={submitting}
+                  style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
+                >
+                  {submitting ? 'Publishing...' : 'Publish Poll'}
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
         </motion.div>
       </div>
 

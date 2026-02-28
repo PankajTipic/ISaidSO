@@ -13,7 +13,7 @@ export function MobileNav() {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 md:hidden z-50">
+    <div className="fixed bottom-0 left-0 right-0 md:hidden z-50 bg-background/95">
       <div className="glass-card border-t border-border/50 rounded-t-3xl px-4 py-3 safe-area-inset-bottom">
         <div className="flex items-center justify-around">
           {navItems.map((item) => {

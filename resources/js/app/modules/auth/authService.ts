@@ -1,6 +1,8 @@
 import axios from 'axios';
+import { host } from '@/util/constants'
 
-const API_URL = 'http://127.0.0.1:8000/api';
+
+const API_URL = `${host}/api`;
 
 // Create independent axios instance
 const api = axios.create({
