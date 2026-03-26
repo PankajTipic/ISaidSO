@@ -11,9 +11,6 @@ export default function App() {
   useEffect(() => {
     // Check auth status on app load
     dispatch(checkAuthStatus());
-
-    // Set dark mode by default
-    document.documentElement.classList.add('dark');
   }, [dispatch]);
 
   return (

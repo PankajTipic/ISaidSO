@@ -15,17 +15,32 @@ class PredictionController extends Controller
      */
     public function index(Request $request)
     {
+        $userId = Auth::guard('sanctum')->id();
+
         $query = Question::where('module_type', 'prediction')
-            ->where('visibility', 'public')
+            ->where(function ($q) use ($userId) {
+                $q->where('visibility', 'public');
+                if ($userId) {
+                    $q->orWhere('user_id', $userId)
+                      ->orWhereHas('groups', function ($g) use ($userId) {
+                          $g->whereHas('members', function ($m) use ($userId) {
+                              $m->where('user_id', $userId);
+                          });
+                      });
+                }
+            })
             ->with(['field', 'user', 'answerType'])
             ->withCount([
             'answers',
             'answers as yes_count' => function ($query) {
-            $query->where('answer', 'Yes');
-        },
+                $query->where('answer', 'Yes');
+            },
             'answers as no_count' => function ($query) {
-            $query->where('answer', 'No');
-        }
+                $query->where('answer', 'No');
+            },
+            'answers as vague_count' => function ($query) {
+                $query->where('answer', 'Vague');
+            }
         ]);
 
         if ($request->has('category_id')) {
@@ -48,12 +63,12 @@ class PredictionController extends Controller
     {
         $validated = $request->validate([
             'field_id' => 'required|exists:fields,id',
-            'questions' => 'required|string', // Used as title
+            'questions' => 'required|string',
             'description' => 'nullable|string',
-            'end_date' => 'required|date', // Mandatory due date
+            'end_date' => 'required|date', // Prediction Due Date (Mandatory)
+            'voting_end_date' => 'nullable|date', // Voting Due Date (Optional)
             'location_scope' => 'nullable|string|in:global,country,city',
             'ans_type_id' => 'nullable|integer',
-            'correct_answer' => 'nullable|string',
             'visibility' => 'nullable|string|in:public,private',
             'start_date' => 'nullable|date',
             'options' => 'nullable|array',
@@ -109,10 +124,21 @@ class PredictionController extends Controller
             'status' => 'closed',
         ]);
 
-        // Determine correct answer - use DB if present, otherwise request
-        $correctAnswer = $prediction->correct_answer && $prediction->correct_answer !== 'N/A'
-            ? $prediction->correct_answer
-            : (($validated['result'] === 'pass') ? 'Yes' : 'No');
+        // --- Majority Rule Logic ---
+        $yesVotes = \App\Models\Answer::where('question_id', $prediction->id)->where('answer', 'Yes')->count();
+        $noVotes = \App\Models\Answer::where('question_id', $prediction->id)->where('answer', 'No')->count();
+        $vagueVotes = \App\Models\Answer::where('question_id', $prediction->id)->where('answer', 'Vague')->count();
+
+        $correctAnswer = 'Vague'; // Default for ties or majority vague
+        if ($yesVotes > $noVotes && $yesVotes > $vagueVotes) {
+            $correctAnswer = 'Yes';
+        } elseif ($noVotes > $yesVotes && $noVotes > $vagueVotes) {
+            $correctAnswer = 'No';
+        }
+        // Ties (Yes==No, Yes==Vague, etc.) implicitly stay 'Vague' per requirements.
+
+        // Sync prediction correct_answer for record keeping
+        $prediction->update(['correct_answer' => $correctAnswer]);
 
         // Get all users who participated in this prediction
         $allVoters = \App\Models\Answer::where('question_id', $prediction->id)->get();
@@ -209,9 +235,31 @@ class PredictionController extends Controller
         }
 
         return response()->json($prediction);
+    }    /**
+     * Toggle prediction visibility between public and private.
+     */
+    public function toggleVisibility(Request $request, $id)
+    {
+        $prediction = Question::findOrFail($id);
+
+        if ($prediction->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized. Only the creator can change visibility.'], 403);
+        }
+
+        $newVisibility = $prediction->visibility === 'public' ? 'private' : 'public';
+        
+        $prediction->update([
+            'visibility' => $newVisibility
+        ]);
+
+        // If provided, sync group IDs (especially useful when switching to private)
+        if ($request->has('group_ids')) {
+            $prediction->groups()->sync($request->group_ids);
+        }
+
+        return response()->json([
+            'message' => "Prediction is now {$newVisibility}",
+            'data' => $prediction->load('groups')
+        ]);
     }
-
-
-
-
 }

@@ -4,9 +4,8 @@ import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
 import { loginUser, registerUser, checkAuthStatus } from '@/app/modules/auth/authSlice';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
-import { Label } from '@/app/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Loader2, Eye, EyeOff, Lock } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
 import { toast } from 'sonner';
 import { host } from '@/util/constants';
@@ -211,27 +210,26 @@ export default function LoginScreen() {
     });
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-black p-4 text-white">
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[#fafafa] p-4 text-[#262626] font-sans">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-md space-y-8"
+                className="w-full max-w-[350px] space-y-3"
             >
-                <div className="text-center">
-                    <h2 className="mt-6 text-3xl font-bold tracking-tight text-white">
-                        {isRegister ? 'Create an account' : 'Sign in to your account'}
-                    </h2>
-                    <p className="mt-2 text-sm text-gray-400">
-                        {isRegister ? 'Enter your details below to create your account' : 'Welcome back! Please enter your details.'}
-                    </p>
-                </div>
+                <div className="bg-white p-10 border border-[#dbdbdb] rounded-sm shadow-sm">
+                    <div className="text-center mb-10">
+                        <h1 className="text-4xl font-bold tracking-tight text-black italic font-serif">
+                            iSaidSO
+                        </h1>
+                        <p className="mt-4 text-sm font-semibold text-gray-500 leading-tight">
+                            {isRegister ? 'Sign up to see predictions from your friends.' : 'Sign in to see what your friends are saying.'}
+                        </p>
+                    </div>
 
-                <div className="bg-zinc-900/50 backdrop-blur-md p-8 rounded-xl border border-zinc-800 shadow-xl">
-                    <form className="space-y-6" onSubmit={handleSubmit}>
+                    <form className="space-y-2" onSubmit={handleSubmit}>
                         {isRegister && (
                             <>
-                                <div className="space-y-2">
-                                    <Label htmlFor="name" className={errors.name ? 'text-destructive' : 'text-gray-200'}>Full Name</Label>
+                                <div className="space-y-1">
                                     <motion.div animate={shakeAnimation(shake.name)}>
                                         <Input
                                             id="name"
@@ -241,16 +239,15 @@ export default function LoginScreen() {
                                                 setName(e.target.value);
                                                 if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
                                             }}
-                                            placeholder="John Doe"
-                                            className={`bg-zinc-800/50 border-zinc-700 text-white placeholder:text-gray-500 focus:border-primary ${errors.name ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                            placeholder="Full Name"
+                                            className={`bg-gray-50 border-gray-300 text-black placeholder:text-gray-500 focus:border-gray-400 h-9 text-xs ${errors.name ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                                         />
                                     </motion.div>
-                                    {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+                                    {errors.name && <p className="text-[10px] text-destructive mt-1">{errors.name}</p>}
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="country" className={errors.country ? 'text-destructive' : 'text-gray-200'}>Country</Label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
                                         <motion.div animate={shakeAnimation(shake.country)}>
                                             <Input
                                                 id="country"
@@ -260,15 +257,14 @@ export default function LoginScreen() {
                                                     setCountry(e.target.value);
                                                     if (errors.country) setErrors(prev => ({ ...prev, country: '' }));
                                                 }}
-                                                placeholder="USA"
-                                                className={`bg-zinc-800/50 border-zinc-700 text-white placeholder:text-gray-500 focus:border-primary ${errors.country ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                                placeholder="Country"
+                                                className={`bg-gray-50 border-gray-300 text-black placeholder:text-gray-500 focus:border-gray-400 h-9 text-xs ${errors.country ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                                             />
                                         </motion.div>
-                                        {errors.country && <p className="text-xs text-destructive mt-1">{errors.country}</p>}
+                                        {errors.country && <p className="text-[10px] text-destructive mt-1">{errors.country}</p>}
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="city" className={errors.city ? 'text-destructive' : 'text-gray-200'}>City</Label>
+                                    <div className="space-y-1">
                                         <motion.div animate={shakeAnimation(shake.city)}>
                                             <Input
                                                 id="city"
@@ -278,18 +274,17 @@ export default function LoginScreen() {
                                                     setCity(e.target.value);
                                                     if (errors.city) setErrors(prev => ({ ...prev, city: '' }));
                                                 }}
-                                                placeholder="New York"
-                                                className={`bg-zinc-800/50 border-zinc-700 text-white placeholder:text-gray-500 focus:border-primary ${errors.city ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                                placeholder="City"
+                                                className={`bg-gray-50 border-gray-300 text-black placeholder:text-gray-500 focus:border-gray-400 h-9 text-xs ${errors.city ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                                             />
                                         </motion.div>
-                                        {errors.city && <p className="text-xs text-destructive mt-1">{errors.city}</p>}
+                                        {errors.city && <p className="text-[10px] text-destructive mt-1">{errors.city}</p>}
                                     </div>
                                 </div>
                             </>
                         )}
 
-                        <div className="space-y-2">
-                            <Label htmlFor="email" className={errors.email ? 'text-destructive' : 'text-gray-200'}>Email address</Label>
+                        <div className="space-y-1">
                             <motion.div animate={shakeAnimation(shake.email)}>
                                 <Input
                                     id="email"
@@ -299,28 +294,14 @@ export default function LoginScreen() {
                                         setEmail(e.target.value);
                                         if (errors.email) setErrors(prev => ({ ...prev, email: '' }));
                                     }}
-                                    placeholder="Enter your email"
-                                    className={`bg-zinc-800/50 border-zinc-700 text-white placeholder:text-gray-500 focus:border-primary ${errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                    placeholder={isRegister ? "Email address" : "Phone number, username, or email"}
+                                    className={`bg-gray-50 border-gray-300 text-black placeholder:text-gray-500 focus:border-gray-400 h-9 text-xs ${errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                                 />
                             </motion.div>
-                            {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
+                            {errors.email && <p className="text-[10px] text-destructive mt-1">{errors.email}</p>}
                         </div>
 
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <Label htmlFor="password" className={errors.password ? 'text-destructive' : 'text-gray-200'}>Password</Label>
-                                {!isRegister && (
-                                    <div className="text-sm">
-                                        <button
-                                            type="button"
-                                            onClick={() => navigate('/forgot-password')}
-                                            className="font-medium text-primary hover:text-primary/90"
-                                        >
-                                            Forgot your password?
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
+                        <div className="space-y-1">
                             <motion.div animate={shakeAnimation(shake.password)}>
                                 <div className="relative">
                                     <Input
@@ -331,24 +312,25 @@ export default function LoginScreen() {
                                             setPassword(e.target.value);
                                             if (errors.password) setErrors(prev => ({ ...prev, password: '' }));
                                         }}
-                                        placeholder="••••••••"
-                                        className={`bg-zinc-800/50 border-zinc-700 text-white placeholder:text-gray-500 pr-10 focus:border-primary ${errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                        placeholder="Password"
+                                        className={`bg-gray-50 border-gray-300 text-black placeholder:text-gray-500 pr-10 focus:border-gray-400 h-9 text-xs ${errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                                     />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-                                    >
-                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                    </button>
+                                    {password && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#262626] hover:text-gray-500 transition-colors"
+                                        >
+                                            {showPassword ? 'Hide' : 'Show'}
+                                        </button>
+                                    )}
                                 </div>
                             </motion.div>
-                            {errors.password && <p className="text-xs text-destructive mt-1">{errors.password}</p>}
+                            {errors.password && <p className="text-[10px] text-destructive mt-1">{errors.password}</p>}
                         </div>
 
                         {isRegister && (
-                            <div className="space-y-2">
-                                <Label htmlFor="passwordConfirmation" className={errors.passwordConfirmation ? 'text-destructive' : 'text-gray-200'}>Confirm Password</Label>
+                            <div className="space-y-1">
                                 <motion.div animate={shakeAnimation(shake.passwordConfirmation)}>
                                     <Input
                                         id="passwordConfirmation"
@@ -358,11 +340,11 @@ export default function LoginScreen() {
                                             setPasswordConfirmation(e.target.value);
                                             if (errors.passwordConfirmation) setErrors(prev => ({ ...prev, passwordConfirmation: '' }));
                                         }}
-                                        placeholder="••••••••"
-                                        className={`bg-zinc-800/50 border-zinc-700 text-white placeholder:text-gray-500 focus:border-primary ${errors.passwordConfirmation ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                        placeholder="Confirm Password"
+                                        className={`bg-gray-50 border-gray-300 text-black placeholder:text-gray-500 focus:border-gray-400 h-9 text-xs ${errors.passwordConfirmation ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                                     />
                                 </motion.div>
-                                {errors.passwordConfirmation && <p className="text-xs text-destructive mt-1">{errors.passwordConfirmation}</p>}
+                                {errors.passwordConfirmation && <p className="text-[10px] text-destructive mt-1">{errors.passwordConfirmation}</p>}
                             </div>
                         )}
 
@@ -379,73 +361,97 @@ export default function LoginScreen() {
 
                         <Button
                             type="submit"
-                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                            className="w-full bg-[#0095f6] hover:bg-[#1877f2] text-white font-bold h-8 rounded-[4px] mt-2 transition-colors duration-200"
                             disabled={isLoading}
                         >
                             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            {isRegister ? 'Create Account' : 'Sign in'}
+                            {isRegister ? 'Sign up' : 'Log in'}
                         </Button>
 
-                        <div className="relative">
+                        <div className="relative !my-6">
                             <div className="absolute inset-0 flex items-center">
-                                <span className="w-full border-t border-zinc-800" />
+                                <span className="w-full border-t border-[#dbdbdb]" />
                             </div>
-                            <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-zinc-900 px-2 text-gray-400">
-                                    Or continue with
+                            <div className="relative flex justify-center text-[13px] font-bold uppercase">
+                                <span className="bg-white px-[18px] text-[#8e8e8e]">
+                                    OR
                                 </span>
                             </div>
                         </div>
 
-                        <a
-                            href={`${host}/api/auth/google`}
-                            className="w-full bg-white hover:bg-gray-200 text-black font-bold flex items-center justify-center border-none h-10 rounded-md transition-colors"
-                        >
-                            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                                <path
-                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                                    fill="#4285F4"
-                                />
-                                <path
-                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                                    fill="#34A853"
-                                />
-                                <path
-                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26.81-.58z"
-                                    fill="#FBBC05"
-                                />
-                                <path
-                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                                    fill="#EA4335"
-                                />
-                            </svg>
-                            Continue with Google
-                        </a>
+                        <div className="flex flex-col items-center space-y-4">
+                            <a
+                                href={`${host}/api/auth/google`}
+                                className="flex items-center justify-center space-x-2 text-[#385185] font-bold text-sm hover:opacity-80 transition-opacity"
+                            >
+                                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                                    <path
+                                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                                        fill="#4285F4"
+                                    />
+                                    <path
+                                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                                        fill="#34A853"
+                                    />
+                                    <path
+                                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26.81-.58z"
+                                        fill="#FBBC05"
+                                    />
+                                    <path
+                                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                        fill="#EA4335"
+                                    />
+                                </svg>
+                                <span>Log in with Google</span>
+                            </a>
 
-                        {/* <button
-  onClick={handleGoogleLogin}
-  className="w-full bg-red-500 text-white py-2 rounded-lg"
->
-  Continue with Google
-</button> */}
-
+                            {!isRegister && (
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/forgot-password')}
+                                    className="text-[12px] text-[#00376b] hover:opacity-80"
+                                >
+                                    Forgot password?
+                                </button>
+                            )}
+                        </div>
                     </form>
-
-                    <div className="mt-6 text-center text-sm">
-                        <span className="text-gray-400">
-                            {isRegister ? 'Already have an account? ' : "Don't have an account? "}
-                        </span>
-                        <button
-                            onClick={() => {
-                                setIsRegister(!isRegister);
-                                setErrors({});
-                            }}
-                            className="font-medium text-primary hover:text-primary/90 underline-offset-4 hover:underline"
-                        >
-                            {isRegister ? 'Sign in' : 'Sign up'}
-                        </button>
-                    </div>
                 </div>
+
+                <div className="bg-white p-6 border border-[#dbdbdb] rounded-sm text-center text-sm shadow-sm">
+                    <span className="text-[#262626]">
+                        {isRegister ? 'Have an account? ' : "Don't have an account? "}
+                    </span>
+                    <button
+                        onClick={() => {
+                            setIsRegister(!isRegister);
+                            setErrors({});
+                        }}
+                        className="font-bold text-[#0095f6] hover:text-[#1877f2]"
+                    >
+                        {isRegister ? 'Log in' : 'Sign up'}
+                    </button>
+                </div>
+
+                {!isRegister && (
+                    <div className="text-center pt-2">
+                        <p className="text-xs text-[#262626]">Get the app.</p>
+                        <div className="flex justify-center space-x-2 mt-4">
+                            <img 
+                                src="https://static.cdninstagram.com/rsrc.php/v3/yz/r/c5Rp7YmS_iE.png" 
+                                alt="App Store" 
+                                className="h-10 cursor-pointer"
+                                onClick={() => window.open('https://apps.apple.com', '_blank')}
+                            />
+                            <img 
+                                src="https://static.cdninstagram.com/rsrc.php/v3/yz/r/E5D6yG9S_iE.png" 
+                                alt="Google Play" 
+                                className="h-10 cursor-pointer"
+                                onClick={() => window.open('https://play.google.com', '_blank')}
+                            />
+                        </div>
+                    </div>
+                )}
             </motion.div >
 
             {/* Email Verification Modal */}
@@ -456,20 +462,20 @@ export default function LoginScreen() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+                            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4 z-50"
                             onClick={() => setShowVerificationModal(false)}
                         >
                             <motion.div
                                 initial={{ scale: 0.9, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.9, opacity: 0 }}
-                                className="glass-card rounded-2xl p-8 max-w-md w-full text-center"
+                                className="bg-white border border-[#dbdbdb] rounded-sm p-8 max-w-md w-full text-center shadow-lg"
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <div className="mb-6">
-                                    <div className="mx-auto w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mb-4">
+                                    <div className="mx-auto w-16 h-16 bg-[#0095f6]/10 rounded-full flex items-center justify-center mb-4">
                                         <svg
-                                            className="w-8 h-8 text-primary"
+                                            className="w-8 h-8 text-[#0095f6]"
                                             fill="none"
                                             stroke="currentColor"
                                             viewBox="0 0 24 24"
@@ -501,7 +507,7 @@ export default function LoginScreen() {
                                             setPassword('');
                                             setPasswordConfirmation('');
                                         }}
-                                        className="w-full bg-primary hover:bg-primary/90"
+                                        className="w-full bg-[#0095f6] hover:bg-[#1877f2] font-bold text-white rounded-[4px]"
                                     >
                                         Got it!
                                     </Button>

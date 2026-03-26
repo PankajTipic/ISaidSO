@@ -13,16 +13,16 @@ export function SplashScreen() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0a0a0f] via-[#16161d] to-[#0a0a0f] relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
       {/* Animated background elements */}
       <motion.div
-        className="absolute inset-0 opacity-30"
+        className="absolute inset-0 opacity-10"
         animate={{
           background: [
-            'radial-gradient(circle at 20% 50%, #a855f744 0%, transparent 50%)',
-            'radial-gradient(circle at 80% 50%, #ec489944 0%, transparent 50%)',
-            'radial-gradient(circle at 50% 80%, #06b6d444 0%, transparent 50%)',
-            'radial-gradient(circle at 20% 50%, #a855f744 0%, transparent 50%)',
+            'radial-gradient(circle at 20% 50%, #a855f722 0%, transparent 50%)',
+            'radial-gradient(circle at 80% 50%, #ec489922 0%, transparent 50%)',
+            'radial-gradient(circle at 50% 80%, #06b6d422 0%, transparent 50%)',
+            'radial-gradient(circle at 20% 50%, #a855f722 0%, transparent 50%)',
           ],
         }}
         transition={{ duration: 8, repeat: Infinity }}

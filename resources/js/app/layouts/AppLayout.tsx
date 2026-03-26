@@ -15,7 +15,7 @@ export default function AppLayout() {
     const showTopNav = !isAdminUser && !isAdminRoute;
 
     return (
-        <div className="min-h-screen bg-black text-white">
+        <div className="min-h-screen bg-background text-foreground">
             {/* Only show normal navbar for regular users & non-admin pages */}
             {showTopNav && <TopNav />}
 

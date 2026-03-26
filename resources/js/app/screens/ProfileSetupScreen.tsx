@@ -128,7 +128,7 @@ export function ProfileSetupScreen() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0a0a0f] via-[#16161d] to-[#0a0a0f] p-4">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/50 to-background p-4">
             <motion.div
                 className="glass-card rounded-3xl p-8 w-full max-w-md"
                 initial={{ scale: 0.9, opacity: 0 }}

@@ -122,14 +122,14 @@ export function GroupDetailScreen() {
                 <Button
                     variant="ghost"
                     onClick={() => navigate('/groups')}
-                    className="mb-6 hover:bg-white/5 -ml-2 text-muted-foreground"
+                    className="mb-6 hover:bg-muted -ml-2 text-muted-foreground"
                 >
                     <ArrowLeft size={20} className="mr-2" />
                     Back to Groups
                 </Button>
 
                 {/* Group Header */}
-                <div className="glass-card rounded-3xl p-6 md:p-10 border border-white/5 mb-8 shadow-2xl relative overflow-hidden">
+                <div className="glass-card rounded-3xl p-6 md:p-10 border border-border mb-8 shadow-2xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-8 opacity-5">
                         <Users size={120} />
                     </div>
@@ -237,7 +237,7 @@ export function GroupDetailScreen() {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         onClick={() => navigate(q.module_type === 'prediction' ? `/prediction/${q.id}` : `/poll/${q.id}`)}
-                                        className="glass-card rounded-2xl p-6 border border-white/5 hover:border-primary/30 transition-all group cursor-pointer shadow-lg hover:shadow-primary/5"
+                                        className="glass-card rounded-2xl p-6 border border-border hover:border-primary/30 transition-all group cursor-pointer shadow-lg hover:shadow-primary/5"
                                     >
                                         <div className="flex items-start justify-between gap-4 mb-4">
                                             <div className="flex items-center gap-2">
@@ -248,7 +248,7 @@ export function GroupDetailScreen() {
                                                     {q.field.fields}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground px-2 py-1 bg-white/5 rounded-md self-start">
+                                            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground px-2 py-1 bg-muted rounded-md self-start">
                                                 <Clock size={14} />
                                                 Ends {new Date(q.end_date).toLocaleDateString()}
                                             </div>
@@ -258,9 +258,9 @@ export function GroupDetailScreen() {
                                             {q.text}
                                         </h4>
 
-                                        <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
+                                        <div className="flex items-center justify-between mt-auto pt-4 border-t border-border">
                                             <div className="flex items-center gap-2.5">
-                                                <Avatar className="w-8 h-8 border border-white/10">
+                                                <Avatar className="w-8 h-8 border border-border">
                                                     <AvatarImage src={q.user.avatar || undefined} />
                                                     <AvatarFallback className="text-[10px] font-bold bg-primary/20 text-primary">
                                                         {q.user.username[0].toUpperCase()}
@@ -273,7 +273,7 @@ export function GroupDetailScreen() {
                                             </div>
 
                                             <div className="flex items-center gap-3">
-                                                <div className="text-[11px] font-black uppercase tracking-tighter text-muted-foreground bg-white/5 px-2 py-1 rounded">
+                                                <div className="text-[11px] font-black uppercase tracking-tighter text-muted-foreground bg-muted px-2 py-1 rounded">
                                                     {q.module_type === 'prediction' ? (
                                                         `${(q.yes_count || 0) + (q.no_count || 0)} Predictions`
                                                     ) : (
@@ -289,7 +289,7 @@ export function GroupDetailScreen() {
                                 ))}
                             </div>
                         ) : (
-                            <div className="py-20 text-center bg-white/2 rounded-3xl border border-dashed border-white/10 shadow-inner">
+                            <div className="py-20 text-center bg-muted/30 rounded-3xl border border-dashed border-border shadow-inner">
                                 <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-6">
                                     <MessageSquare size={40} className="text-muted-foreground/40" />
                                 </div>
@@ -316,9 +316,9 @@ export function GroupDetailScreen() {
                                         key={member.id}
                                         initial={{ opacity: 0, scale: 0.95 }}
                                         animate={{ opacity: 1, scale: 1 }}
-                                        className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-primary/20 transition-all shadow-md group"
+                                        className="flex items-center gap-4 p-4 rounded-2xl bg-muted border border-border hover:border-primary/20 transition-all shadow-md group"
                                     >
-                                        <Avatar className="w-12 h-12 border-2 border-white/5 group-hover:border-primary/20 transition-all">
+                                        <Avatar className="w-12 h-12 border-2 border-border group-hover:border-primary/20 transition-all">
                                             <AvatarImage src={member.avatar || undefined} alt={member.username} />
                                             <AvatarFallback className="bg-primary/10 text-primary font-bold">
                                                 {member.name?.[0] || member.username?.[0]}

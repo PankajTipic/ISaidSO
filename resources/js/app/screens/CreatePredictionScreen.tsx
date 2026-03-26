@@ -438,7 +438,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/ta
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Label } from '@/app/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group';
-import { Plus, X, Globe, Flag, MapPin, Check, CalendarIcon } from 'lucide-react';
+import { Plus, X, Globe, Flag, MapPin, Check, CalendarIcon, Lock, ArrowLeft } from 'lucide-react';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { TopNav } from '@/app/components/TopNav';
 import { MobileNav } from '@/app/components/MobileNav';
@@ -490,6 +491,8 @@ export function CreatePredictionScreen() {
   const [correctAnswer, setCorrectAnswer] = useState('');
   const [pollCorrectAnswer, setPollCorrectAnswer] = useState('');
   const [votingEndDate, setVotingEndDate] = useState('');
+  const [predictionOverDate, setPredictionOverDate] = useState('');
+  const [isReviewing, setIsReviewing] = useState(false);
 
   // Poll specific state
   const [pollOptions, setPollOptions] = useState<string[]>(['', '', '']);
@@ -657,15 +660,25 @@ export function CreatePredictionScreen() {
       return handlePublishPoll();
     }
 
-    // Prediction Validation
-    if (!text.trim()) return toast.error('Please write your prediction');
-    if (selectedFieldId === null) return toast.error('Please select a category');
-    if (!votingEndDate) return toast.error('Please set voting end date');
-    if (!correctAnswer.trim()) return toast.error('Please provide the correct answer');
+    // --- Step 1: Validation & Review Transition ---
+    if (!isReviewing) {
+      if (!text.trim()) return toast.error('Please write your prediction');
+      if (selectedFieldId === null) return toast.error('Please select a category');
+      if (!predictionOverDate) return toast.error('Please set the Prediction Over date');
 
-    const endDate = new Date(votingEndDate);
-    if (endDate <= new Date()) return toast.error('Voting end date must be in the future');
+      const predDate = new Date(predictionOverDate);
+      if (predDate <= new Date()) return toast.error('Prediction Over date must be in the future');
 
+      if (votingEndDate) {
+        const vDate = new Date(votingEndDate);
+        if (vDate <= new Date()) return toast.error('Voting end date must be in the future');
+        if (vDate >= predDate) return toast.error('Voting must end before the prediction is over');
+      }
+
+      return setIsReviewing(true); // Switch to review screen
+    }
+
+    // --- Step 2: Confirmation & Publishing ---
     const selectedType = answerTypes.find(t => t.ans_type === 'Yes/No');
     if (!selectedType) return toast.error('Standard answer type "Yes/No" not found');
 
@@ -673,20 +686,20 @@ export function CreatePredictionScreen() {
       field_id: selectedFieldId,
       questions: text.trim(),
       description: description.trim() || null,
-      location_scope: locationScope,
+      location_scope: 'global', // Hidden from UI, defaults to global
       ans_type_id: selectedType.id,
-      correct_answer: correctAnswer.trim(),
       visibility,
       start_date: formatToMySQLDateTime(new Date().toISOString().slice(0, 16)),
-      end_date: formatToMySQLDateTime(votingEndDate),
-      options: ['Yes', 'No'],
+      end_date: formatToMySQLDateTime(predictionOverDate),
+      voting_end_date: votingEndDate ? formatToMySQLDateTime(votingEndDate) : null,
+      options: ['Yes', 'No', 'Vague'],
       group_ids: selectedGroupIds,
     };
 
     try {
       setSubmitting(true);
       await postAuth('/api/predictions', payload);
-      toast.success('Prediction created successfully!');
+      toast.success('Your prediction has been standardized!');
       setTimeout(() => navigate('/home'), 900);
     } catch (err: any) {
       console.error('Publish failed:', err);
@@ -733,32 +746,34 @@ export function CreatePredictionScreen() {
           transition={{ duration: 0.5 }}
         >
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Create New Content</h1>
+            <h1 className="text-3xl font-bold mb-2">
+              {isReviewing ? 'Review Your Prediction' : 'Create New Content'}
+            </h1>
             <p className="text-muted-foreground">
-              Share your thoughts or ask the community what they think.
+              {isReviewing 
+                ? 'Check everything looks right before standardizing your forecast.' 
+                : 'Share your thoughts or ask the community what they think.'}
             </p>
           </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-8 glass-card border p-1 rounded-2xl h-14">
-              <TabsTrigger value="prediction" className="rounded-xl h-full text-base">Predictions</TabsTrigger>
-              <TabsTrigger value="poll" className="rounded-xl h-full text-base">Polls</TabsTrigger>
-            </TabsList>
-
+          {!isReviewing && (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            {/* Poll creation is now hidden from the main UI tab list */}
+            
             <TabsContent value="prediction" className="space-y-7 focus:outline-none">
               {/* Prediction Specific Content */}
-              <div className="glass-card rounded-3xl border border-white/5 p-6 md:p-8 space-y-7 shadow-2xl">
+              <div className="glass-card rounded-3xl border border-border/50 p-6 md:p-8 space-y-7 shadow-2xl">
                 {/* Category Picker */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-semibold ml-1">Category</Label>
                     <Dialog open={isFieldModalOpen} onOpenChange={setIsFieldModalOpen}>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8 glass-card border border-white/10 hover:bg-white/5">
+                        <Button variant="outline" size="sm" className="h-8 glass-card border border-border hover:bg-muted">
                           <Plus size={14} className="mr-1.5" /> Add Category
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="glass-card border border-white/10">
+                      <DialogContent className="glass-card border border-border">
                         <DialogHeader>
                           <DialogTitle>Add New Category</DialogTitle>
                         </DialogHeader>
@@ -767,7 +782,7 @@ export function CreatePredictionScreen() {
                             placeholder="e.g. Technology, Sports..."
                             value={newFieldName}
                             onChange={(e) => setNewFieldName(e.target.value)}
-                            className="glass-card border-white/10"
+                            className="glass-card border-border"
                           />
                           <Button
                             className="w-full"
@@ -782,10 +797,10 @@ export function CreatePredictionScreen() {
                     </Dialog>
                   </div>
                   <Select value={selectedFieldId?.toString() ?? ''} onValueChange={v => setSelectedFieldId(Number(v))}>
-                    <SelectTrigger className="glass-card border-white/10 h-12">
+                    <SelectTrigger className="glass-card border-border h-12">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
-                    <SelectContent className="glass-card border-white/10">
+                    <SelectContent className="glass-card border-border">
                       {fields.map(f => (
                         <SelectItem key={f.id} value={f.id.toString()}>{f.fields}</SelectItem>
                       ))}
@@ -800,7 +815,7 @@ export function CreatePredictionScreen() {
                     placeholder="What do you predict will happen?"
                     value={text}
                     onChange={e => setText(e.target.value)}
-                    className="glass-card border-white/10 min-h-32 p-4 text-lg"
+                    className="glass-card border-border min-h-32 p-4 text-lg"
                     maxLength={500}
                   />
                   <div className="flex justify-end pr-1">
@@ -810,49 +825,56 @@ export function CreatePredictionScreen() {
 
                 {/* Description */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-semibold ml-1">Description <span className="text-white/30">(optional)</span></Label>
+                  <Label className="text-sm font-semibold ml-1">Description <span className="text-muted-foreground/50">(optional)</span></Label>
                   <Textarea
                     placeholder="Add context or evidence for your prediction..."
                     value={description}
                     onChange={e => setDescription(e.target.value)}
-                    className="glass-card border-white/10 min-h-24 p-4"
+                    className="glass-card border-border min-h-24 p-4"
                   />
                 </div>
 
-                {/* Additional Settings */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                {/* Timing & Visibility */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold ml-1">Location Scope</Label>
-                    <Select
-                      value={locationScope}
-                      onValueChange={v => setLocationScope(v as any)}
-                    >
-                      <SelectTrigger className="glass-card border-white/10 h-12">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="glass-card border-white/10">
-                        <SelectItem value="global"><div className="flex items-center gap-2"><Globe size={14} className="text-blue-400" /> Global</div></SelectItem>
-                        <SelectItem value="country"><div className="flex items-center gap-2"><Flag size={14} className="text-red-400" /> Country</div></SelectItem>
-                        <SelectItem value="city"><div className="flex items-center gap-2"><MapPin size={14} className="text-green-400" /> City</div></SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-sm font-semibold ml-1">Voting Ends <span className="text-muted-foreground/50 font-normal text-[10px] ml-1">(Optional)</span></Label>
+                    <Input
+                      type="datetime-local"
+                      value={votingEndDate}
+                      onChange={e => setVotingEndDate(e.target.value)}
+                      className="glass-card border-border h-12 text-foreground"
+                    />
+                    <p className="text-[10px] text-muted-foreground ml-1">Default: voting ends when prediction is over.</p>
                   </div>
                   <div className="space-y-2">
-                    <RadioGroup
-                      value={visibility}
-                      onValueChange={v => setVisibility(v as any)}
-                      className="flex h-12 gap-6 items-center"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="public" id="p-public" />
-                        <Label htmlFor="p-public" className="cursor-pointer">Public</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="private" id="p-private" />
-                        <Label htmlFor="p-private" className="cursor-pointer">Private</Label>
-                      </div>
-                    </RadioGroup>
+                    <Label className="text-sm font-semibold ml-1">Prediction Over Date <span className="text-primary font-normal text-[10px] ml-1">(Mandatory)</span></Label>
+                    <Input
+                      type="datetime-local"
+                      value={predictionOverDate}
+                      onChange={e => setPredictionOverDate(e.target.value)}
+                      className="glass-card border-border h-12 text-foreground border-primary/30 shadow-[0_0_10px_rgba(168,85,247,0.05)]"
+                      min={new Date().toISOString().slice(0, 16)}
+                      required
+                    />
                   </div>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <Label className="text-sm font-semibold ml-1">Visibility</Label>
+                  <RadioGroup
+                    value={visibility}
+                    onValueChange={v => setVisibility(v as any)}
+                    className="flex h-12 gap-6 items-center"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="public" id="p-public" />
+                      <Label htmlFor="p-public" className="cursor-pointer">Public</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="private" id="p-private" />
+                      <Label htmlFor="p-private" className="cursor-pointer">Private</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
 
                 {/* Group Selection for Private Predictions */}
@@ -871,7 +893,7 @@ export function CreatePredictionScreen() {
                           onClick={() => toggleGroupSelection(group.id)}
                           className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all truncate max-w-[200px] ${selectedGroupIds.includes(group.id)
                             ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(168,85,247,0.2)]'
-                            : 'bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10'
+                            : 'bg-muted border-border text-muted-foreground hover:bg-muted/50'
                             }`}
                         >
                           <span className="truncate">{group.name}</span>
@@ -883,39 +905,10 @@ export function CreatePredictionScreen() {
                   </motion.div>
                 )}
 
-                {/* Timing */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold ml-1">Due Date (Voting Ends)</Label>
-                    <Input
-                      type="datetime-local"
-                      value={votingEndDate}
-                      onChange={e => setVotingEndDate(e.target.value)}
-                       className="glass-card border-white/10 h-12 text-white 
-             [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert 
-             [&::-webkit-calendar-picker-indicator]:brightness-0 
-             [&::-webkit-calendar-picker-indicator]:hue-rotate(180deg)"
-                      min={new Date().toISOString().slice(0, 16)}
-                    />
-                    
-                  </div>
-                </div>
 
 
 
-                {/* Correct Answer */}
-                <div className="space-y-2 pt-2 border-t border-white/5 mt-4">
-                  <Label className="text-sm font-semibold ml-1">Correct Answer (Expected Outcome)</Label>
-                  <Select value={correctAnswer} onValueChange={setCorrectAnswer}>
-                    <SelectTrigger className="glass-card border-white/10 h-12">
-                      <SelectValue placeholder="Choose expected result" />
-                    </SelectTrigger>
-                    <SelectContent className="glass-card">
-                      <SelectItem value="Yes">Yes (Achieved)</SelectItem>
-                      <SelectItem value="No">No (Not Achieved)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Correct Answer Selection Removed for Predictions (Decided by Majority Vote) */}
 
 
                 <Button
@@ -924,18 +917,29 @@ export function CreatePredictionScreen() {
                   disabled={submitting}
                   style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
                 >
-                  {submitting ? 'Publishing...' : 'Publish Prediction'}
+                  {submitting ? 'Processing...' : 'Review Prediction'}
                 </Button>
+
+                {/* Subtle hidden switch to Polls */}
+                <div className="pt-6 text-center">
+                  <button 
+                    type="button"
+                    onClick={() => setActiveTab('poll')}
+                    className="text-xs text-muted-foreground/60 hover:text-primary transition-colors font-semibold underline underline-offset-4"
+                  >
+                    Create a Poll instead?
+                  </button>
+                </div>
               </div>
             </TabsContent>
 
             <TabsContent value="poll" className="space-y-7 focus:outline-none">
-              <div className="glass-card rounded-3xl border border-white/5 p-6 md:p-8 space-y-7 shadow-2xl">
+              <div className="glass-card rounded-3xl border border-border/50 p-6 md:p-8 space-y-7 shadow-2xl">
                 {/* Same Category Picker for Polls */}
                 <div className="space-y-2">
                   <Label className="text-sm font-semibold ml-1">Category</Label>
                   <Select value={selectedFieldId?.toString() ?? ''} onValueChange={v => setSelectedFieldId(Number(v))}>
-                    <SelectTrigger className="glass-card border-white/10 h-12">
+                    <SelectTrigger className="glass-card border-border h-12">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent className="glass-card font-inter">
@@ -953,7 +957,7 @@ export function CreatePredictionScreen() {
                     placeholder="What would you like to ask?"
                     value={text}
                     onChange={e => setText(e.target.value)}
-                    className="glass-card border-white/10 min-h-32 p-4 text-lg"
+                    className="glass-card border-border min-h-32 p-4 text-lg"
                     maxLength={500}
                   />
                   <div className="flex justify-end pr-1">
@@ -976,7 +980,7 @@ export function CreatePredictionScreen() {
                           value={opt}
                           onChange={e => handlePollOptionChange(i, e.target.value)}
                           placeholder={`Option ${i + 1}`}
-                          className="glass-card border-white/10 h-11"
+                          className="glass-card border-border h-11"
                         />
                         {pollOptions.length > 2 && (
                           <Button variant="ghost" size="icon" onClick={() => handleRemovePollOption(i)} className="text-red-400">
@@ -989,10 +993,10 @@ export function CreatePredictionScreen() {
                 </div>
 
                 {/* Correct Answer for Poll */}
-                <div className="space-y-2 pt-2 border-t border-white/5 mt-4">
+                <div className="space-y-2 pt-2 border-t border-border/50 mt-4">
                   <Label className="text-sm font-semibold ml-1">Correct Answer (Optional Rewards)</Label>
                   <Select value={pollCorrectAnswer} onValueChange={setPollCorrectAnswer}>
-                    <SelectTrigger className="glass-card border-white/10 h-12">
+                    <SelectTrigger className="glass-card border-border h-12">
                       <SelectValue placeholder="Identify the correct result" />
                     </SelectTrigger>
                     <SelectContent className="glass-card">
@@ -1013,10 +1017,7 @@ export function CreatePredictionScreen() {
                       type="datetime-local"
                       value={votingEndDate}
                       onChange={e => setVotingEndDate(e.target.value)}
-                      className="glass-card border-white/10 h-12 text-white 
-             [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert 
-             [&::-webkit-calendar-picker-indicator]:brightness-0 
-             [&::-webkit-calendar-picker-indicator]:hue-rotate(180deg)"
+                      className="glass-card border-border h-12 text-foreground"
                       min={new Date().toISOString().slice(0, 16)}
                     />
                   </div>
@@ -1055,7 +1056,7 @@ export function CreatePredictionScreen() {
                           onClick={() => toggleGroupSelection(group.id)}
                           className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all truncate max-w-[200px] ${selectedGroupIds.includes(group.id)
                             ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(168,85,247,0.2)]'
-                            : 'bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10'
+                            : 'bg-muted border-border text-muted-foreground hover:bg-muted/50'
                             }`}
                         >
                           <span className="truncate">{group.name}</span>
@@ -1075,9 +1076,87 @@ export function CreatePredictionScreen() {
                 >
                   {submitting ? 'Publishing...' : 'Publish Poll'}
                 </Button>
+
+                {/* Subtle switch back to Predictions */}
+                <div className="pt-6 text-center">
+                  <button 
+                    type="button"
+                    onClick={() => setActiveTab('prediction')}
+                    className="text-xs text-muted-foreground/60 hover:text-primary transition-colors font-semibold underline underline-offset-4"
+                  >
+                    Create a Prediction instead?
+                  </button>
+                </div>
               </div>
             </TabsContent>
           </Tabs>
+          )}
+
+          {isReviewing && activeTab === 'prediction' && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="glass-card rounded-3xl border border-border/50 p-6 md:p-10 space-y-8 shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary via-purple-500 to-pink-500" />
+              
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest rounded-full">
+                    {fields.find(f => f.id === selectedFieldId)?.fields || 'General'}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest flex items-center gap-1.5">
+                    {visibility === 'public' ? <Globe size={12} /> : <Lock size={12} />}
+                    {visibility}
+                  </span>
+                </div>
+
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-bold leading-tight mb-4">
+                    {text}
+                  </h2>
+                  {description && (
+                    <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap italic border-l-2 border-border pl-4">
+                      {description}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                  <div className="p-4 bg-muted/40 rounded-2xl border border-border/40">
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Voting Ends</p>
+                    <p className="text-sm font-semibold">
+                      {votingEndDate ? format(new Date(votingEndDate), 'MMM dd, yyyy HH:mm') : 'When prediction ends'}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-muted/40 rounded-2xl border border-border/40">
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Prediction Over</p>
+                    <p className="text-sm font-semibold text-primary">
+                      {format(new Date(predictionOverDate), 'MMM dd, yyyy HH:mm')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 pt-6">
+                <Button
+                  className="w-full h-14 text-lg font-bold shadow-xl shadow-primary/20"
+                  onClick={handlePublish}
+                  disabled={submitting}
+                  style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
+                >
+                  {submitting ? 'Standardizing...' : 'Confirm & Publish'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full h-12 text-muted-foreground font-semibold hover:text-foreground"
+                  onClick={() => setIsReviewing(false)}
+                >
+                  <ArrowLeft size={16} className="mr-2" /> Back to Edit
+                </Button>
+              </div>
+            </motion.div>
+          )}
         </motion.div>
       </div>
 

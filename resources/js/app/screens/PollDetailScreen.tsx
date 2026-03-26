@@ -307,6 +307,8 @@ import {
   Target,
   ThumbsUp,
   CheckCircle2,
+  Globe,
+  Lock,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
@@ -463,11 +465,31 @@ export function PollDetailScreen() {
             </Button>
           </div>
 
-          {/* Question */}
           <div className="glass-card rounded-2xl p-6">
-            <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-400 mb-3 inline-block">
-              Poll
-            </span>
+            <div className="flex items-center gap-3 mb-3">
+              <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-400">
+                Poll
+              </span>
+
+              {/* Visibility Badge */}
+              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-tight transition-colors ${
+                poll?.visibility === 'private'
+                  ? 'bg-amber-500/10 border-amber-500/20 text-amber-600'
+                  : 'bg-blue-500/10 border-blue-500/20 text-blue-600'
+              }`}>
+                {poll?.visibility === 'private' ? (
+                  <>
+                    <Lock size={12} className="shrink-0" />
+                    <span>Private Poll</span>
+                  </>
+                ) : (
+                  <>
+                    <Globe size={12} className="shrink-0" />
+                    <span>Public Poll</span>
+                  </>
+                )}
+              </div>
+            </div>
             <h2 className="text-2xl font-bold leading-relaxed">
               {poll.questions}
             </h2>
@@ -511,11 +533,11 @@ export function PollDetailScreen() {
             {isClosed ? (
               // ── POLL IS CLOSED ──
               <div className="space-y-6">
-                <div className="p-5 rounded-xl bg-black/50 border border-purple-500/30 text-center">
-                  <div className="mx-auto w-14 h-14 rounded-full bg-purple-500/20 flex items-center justify-center mb-4">
-                    <CheckCircle2 size={28} className="text-purple-400" />
+                <div className="p-5 rounded-xl bg-muted border border-border text-center">
+                  <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <CheckCircle2 size={28} className="text-primary" />
                   </div>
-                  <h4 className="text-xl font-bold text-white mb-2">
+                  <h4 className="text-xl font-bold text-foreground mb-2">
                     Poll Has Ended
                   </h4>
                   {winner && (
@@ -538,7 +560,7 @@ export function PollDetailScreen() {
                     return (
                       <div key={index} className="space-y-2">
                         <div className={`p-4 rounded-xl flex items-center justify-between border-2 ${
-                          isWinner ? 'border-green-500 bg-green-500/10' : 'border-transparent bg-white/5'
+                          isWinner ? 'border-green-500 bg-green-500/10' : 'border-transparent bg-muted'
                         }`}>
                           <span className="font-medium">{option}</span>
                           <span className="font-bold text-lg">{percentage}% ({count})</span>
@@ -569,7 +591,7 @@ export function PollDetailScreen() {
                         onClick={() => !hasVoted && setSelectedAnswer(option)}
                         className={`p-4 rounded-xl cursor-pointer transition-all border-2 flex items-center justify-between ${
                           hasVoted || isClosed
-                            ? (isUserVote ? 'border-purple-500 bg-purple-500/10' : 'border-transparent bg-white/5')
+                            ? (isUserVote ? 'border-purple-500 bg-purple-500/10' : 'border-transparent bg-muted')
                             : (isSelected ? 'border-purple-500 bg-purple-500/10' : 'border-transparent hover:border-purple-500/40 hover:bg-purple-500/5')
                         } ${hasVoted ? 'cursor-default' : 'cursor-pointer'}`}
                       >
@@ -599,7 +621,7 @@ export function PollDetailScreen() {
 
                 {hasVoted && (
                   <div className="mt-6 p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 text-center">
-                    <p className="font-medium text-purple-300">Your vote has been recorded!</p>
+                    <p className="font-medium text-primary">Your vote has been recorded!</p>
                     <p className="text-sm text-muted-foreground mt-1">
                       You voted: <strong>{userVote}</strong>
                     </p>

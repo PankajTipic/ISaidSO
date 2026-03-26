@@ -460,7 +460,7 @@ export function PollScreen() {
         className="md:hidden fixed bottom-20 right-6 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl z-40 transition-transform hover:scale-110"
         style={{
           background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-          boxShadow: '0 0 30px rgba(168, 85, 247, 0.6), 0 0 60px rgba(168, 85, 247, 0.3)',
+          boxShadow: '0 10px 25px rgba(168, 85, 247, 0.25)',
         }}
       >
         <Plus size={28} className="text-white" />

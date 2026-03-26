@@ -16,8 +16,20 @@ class PollController extends Controller
      */
     public function index()
     {
+        $userId = Auth::guard('sanctum')->id();
+
         $polls = Question::where('module_type', 'poll')
-            ->where('visibility', 'public')
+            ->where(function ($q) use ($userId) {
+                $q->where('visibility', 'public');
+                if ($userId) {
+                    $q->orWhere('user_id', $userId)
+                      ->orWhereHas('groups', function ($g) use ($userId) {
+                          $g->whereHas('members', function ($m) use ($userId) {
+                              $m->where('user_id', $userId);
+                          });
+                      });
+                }
+            })
             ->with(['field', 'user', 'answerType'])
             ->withCount('answers') // Count total votes
             ->latest()

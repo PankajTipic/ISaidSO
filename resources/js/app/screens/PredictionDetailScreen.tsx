@@ -411,6 +411,8 @@ import {
   CheckCircle2,
   XCircle,
   Users,
+  Globe,
+  Lock,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
@@ -516,6 +518,21 @@ export function PredictionDetailScreen() {
     }
   };
 
+  const handleToggleVisibility = async () => {
+    try {
+      setSubmitting(true);
+      const res = await patchAuth(`/api/predictions/${id}/toggle-visibility`);
+      if (res.data) {
+        setPrediction((prev: any) => ({ ...prev, visibility: res.data.visibility }));
+        toast.success(`Prediction is now ${res.data.visibility}`);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to change visibility');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   
 
   if (loading) {
@@ -551,6 +568,7 @@ export function PredictionDetailScreen() {
   // Calculate voting stats for Yes/No
   let agreePercentage = 0;
   let disagreePercentage = 0;
+  let vaguePercentage = 0;
   let totalValidVotes = 0;
 
   if (prediction?.answers && Array.isArray(prediction.answers)) {
@@ -560,10 +578,15 @@ export function PredictionDetailScreen() {
     const disagreeCount = prediction.answers.filter(
       (a: any) => a.answer?.toLowerCase() === 'no'
     ).length;
-    totalValidVotes = agreeCount + disagreeCount;
+    const vagueCount = prediction.answers.filter(
+      (a: any) => a.answer?.toLowerCase() === 'vague'
+    ).length;
+
+    totalValidVotes = agreeCount + disagreeCount + vagueCount;
     if (totalValidVotes > 0) {
       agreePercentage = Math.round((agreeCount / totalValidVotes) * 100);
-      disagreePercentage = 100 - agreePercentage;
+      disagreePercentage = Math.round((disagreeCount / totalValidVotes) * 100);
+      vaguePercentage = 100 - (agreePercentage + disagreePercentage);
     }
   }
 
@@ -573,15 +596,17 @@ export function PredictionDetailScreen() {
   const userVote = prediction?.answers?.find(
     (a: any) => a.user_id === currentUser?.id
   )?.answer;
-
   return (
     <div className="min-h-screen bg-background pb-6">
+      <TopNav />
+
       {/* Sticky Header */}
       <div className="sticky top-0 z-40 glass-card border-b border-border/50 px-4 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft size={20} />
           </Button>
+          <div className="flex-1" />
         </div>
       </div>
 
@@ -592,17 +617,37 @@ export function PredictionDetailScreen() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
-          {/* Category & Risk Badge */}
+          {/* Category & Visibility Badge */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Category */}
             <span
-              className="px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wide"
+              className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide"
               style={{
-                backgroundColor: `${categoryColors.trending}22`,
-                color: categoryColors.trending,
+                backgroundColor: `${(categoryColors as any)[prediction?.field?.fields?.toLowerCase()] || categoryColors.trending}22`,
+                color: (categoryColors as any)[prediction?.field?.fields?.toLowerCase()] || categoryColors.trending,
               }}
             >
-              {prediction?.field?.fields || 'Unknown'}
+              {prediction?.field?.fields || 'General'}
             </span>
+
+            {/* Visibility Badge */}
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-tight transition-colors ${
+              prediction?.visibility === 'private'
+                ? 'bg-amber-500/10 border-amber-500/20 text-amber-600'
+                : 'bg-blue-500/10 border-blue-500/20 text-blue-600'
+            }`}>
+              {prediction?.visibility === 'private' ? (
+                <>
+                  <Lock size={12} className="shrink-0" />
+                  <span>Private</span>
+                </>
+              ) : (
+                <>
+                  <Globe size={12} className="shrink-0" />
+                  <span>Public</span>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Prediction Text */}
@@ -612,51 +657,12 @@ export function PredictionDetailScreen() {
             </h1>
           </div>
 
-          {/* Creator Card */}
-          {/* <div className="glass-card rounded-2xl p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <Avatar className="w-12 h-12">
-                <AvatarImage src={prediction?.user?.avatar_url} />
-                <AvatarFallback>{prediction?.user?.name?.[0] || '?'}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <p className="font-medium">{prediction?.user?.name || 'Anonymous'}</p>
-                
-              </div>
-            </div>
-           <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border/50">
-  <div>
-    <p className="text-xs text-muted-foreground mb-1">Accuracy</p>
-    <p className="text-lg font-bold text-[#10b981]">
-      {prediction?.user_score?.accuracy?.toFixed(1) || '0.0'}%
-    </p>
-  </div>
-  <div>
-    <p className="text-xs text-muted-foreground mb-1">Predictions</p>
-    <p className="text-lg font-bold">
-      {prediction?.user_score?.total_predictions || 0}
-    </p>
-  </div>
-</div>
-          </div> */}
-
-
-
-
-
-
-
-
-
-
-
-
           {/* Time Info */}
           <div className="glass-card rounded-2xl p-4 space-y-3">
             <div className="flex items-center gap-3">
               <Clock size={18} className="text-[#a855f7]" />
               <div className="flex-1">
-                <p className="text-xs text-muted-foreground">Voting Ends</p>
+                <p className="text-xs text-muted-foreground">Prediction Over</p>
                 <p className="font-medium">{getTimeAgo(prediction.end_date)}</p>
                 <p className="text-xs text-muted-foreground">
                   {getFormattedDate(prediction.end_date)}
@@ -680,13 +686,12 @@ export function PredictionDetailScreen() {
             </h3>
 
             {isClosed ? (
-              // ── QUESTION IS CLOSED ──
               <div className="space-y-6">
-                <div className="text-center p-8 bg-black/40 rounded-xl border border-white/10">
-                  <div className="mx-auto w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center mb-4">
-                    <CheckCircle2 size={32} className="text-purple-400" />
+                <div className="text-center p-8 bg-muted rounded-xl border border-border">
+                  <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <CheckCircle2 size={32} className="text-primary" />
                   </div>
-                  <h4 className="text-xl font-bold text-white mb-3">
+                  <h4 className="text-xl font-bold text-foreground mb-3">
                     This prediction has ended
                   </h4>
 
@@ -696,23 +701,22 @@ export function PredictionDetailScreen() {
                         className={`px-8 py-4 rounded-2xl text-2xl font-bold shadow-lg ${
                           correctAnswer.toLowerCase() === 'yes'
                             ? 'bg-green-600/20 text-green-400 border-2 border-green-500/40'
-                            : 'bg-red-600/20 text-red-400 border-2 border-red-500/40'
+                            : correctAnswer.toLowerCase() === 'no'
+                            ? 'bg-red-600/20 text-red-400 border-2 border-red-500/40'
+                            : 'bg-amber-600/20 text-amber-400 border-2 border-amber-500/40'
                         }`}
                       >
-                        Correct Answer: {correctAnswer}
+                        Result: {correctAnswer}
                       </div>
                       <p className="text-sm text-muted-foreground">
                         Outcome verified on {getFormattedDate(prediction.end_date)}
                       </p>
                     </div>
                   ) : (
-                    <p className="text-muted-foreground mt-4">
-                      Result not yet finalized
-                    </p>
+                    <p className="text-muted-foreground mt-4">Result not yet finalized</p>
                   )}
                 </div>
 
-                {/* Final voting stats */}
                 {totalValidVotes > 0 && (
                   <div className="space-y-5">
                     <div className="flex justify-between items-center text-sm">
@@ -725,11 +729,19 @@ export function PredictionDetailScreen() {
 
                     <div className="flex justify-between items-center text-sm">
                       <span className="flex items-center gap-2 text-[#ef4444]">
-                        <ThumbsDown size={16} /> Disagree
+                        <XCircle size={16} /> No
                       </span>
                       <span className="font-bold text-[#ef4444]">{disagreePercentage}%</span>
                     </div>
                     <Progress value={disagreePercentage} className="h-3" />
+
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="flex items-center gap-2 text-amber-500">
+                        <Users size={16} /> Vague / Tie
+                      </span>
+                      <span className="font-bold text-amber-500">{vaguePercentage}%</span>
+                    </div>
+                    <Progress value={vaguePercentage} className="h-3" />
 
                     <p className="text-xs text-center text-muted-foreground mt-6">
                       Based on {totalValidVotes} total votes
@@ -738,37 +750,49 @@ export function PredictionDetailScreen() {
                 )}
               </div>
             ) : (
-              // ── QUESTION STILL OPEN ──
               <>
                 <p className="text-xs text-muted-foreground mb-6">
                   Do you think this will happen? Cast your vote below.
                 </p>
 
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-3 gap-3 mb-6">
                   <button
                     onClick={() => setSelectedAnswer('Yes')}
                     disabled={hasVoted}
-                    className={`p-6 rounded-2xl transition-all border-2 text-center ${
+                    className={`p-4 rounded-2xl transition-all border-2 text-center flex flex-col items-center justify-center ${
                       selectedAnswer === 'Yes' || userVote === 'Yes'
                         ? 'border-green-500 bg-green-500/10 shadow-lg shadow-green-500/20'
-                        : 'border-transparent bg-gradient-to-br from-white/5 to-white/2 hover:border-green-500/40'
+                        : 'border-transparent bg-muted/50 hover:border-green-500/40'
                     } ${hasVoted ? 'opacity-70 cursor-default' : 'hover:scale-[1.02] cursor-pointer'}`}
                   >
-                    <ThumbsUp size={32} className="mx-auto mb-3 text-green-400" />
-                    <p className="font-bold text-lg">Yes</p>
+                    <ThumbsUp size={24} className="mb-2 text-green-400" />
+                    <p className="font-bold text-sm">Yes</p>
                   </button>
 
                   <button
                     onClick={() => setSelectedAnswer('No')}
                     disabled={hasVoted}
-                    className={`p-6 rounded-2xl transition-all border-2 text-center ${
+                    className={`p-4 rounded-2xl transition-all border-2 text-center flex flex-col items-center justify-center ${
                       selectedAnswer === 'No' || userVote === 'No'
                         ? 'border-red-500 bg-red-500/10 shadow-lg shadow-red-500/20'
-                        : 'border-transparent bg-gradient-to-br from-white/5 to-white/2 hover:border-red-500/40'
+                        : 'border-transparent bg-muted/50 hover:border-red-500/40'
                     } ${hasVoted ? 'opacity-70 cursor-default' : 'hover:scale-[1.02] cursor-pointer'}`}
                   >
-                    <ThumbsDown size={32} className="mx-auto mb-3 text-red-400" />
-                    <p className="font-bold text-lg">No</p>
+                    <ThumbsDown size={24} className="mb-2 text-red-400" />
+                    <p className="font-bold text-sm">No</p>
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedAnswer('Vague')}
+                    disabled={hasVoted}
+                    className={`p-4 rounded-2xl transition-all border-2 text-center flex flex-col items-center justify-center ${
+                      selectedAnswer === 'Vague' || userVote === 'Vague'
+                        ? 'border-amber-500 bg-amber-500/10 shadow-lg shadow-amber-500/20'
+                        : 'border-transparent bg-muted/50 hover:border-amber-500/40'
+                    } ${hasVoted ? 'opacity-70 cursor-default' : 'hover:scale-[1.02] cursor-pointer'}`}
+                  >
+                    <Users size={24} className="mb-2 text-amber-400" />
+                    <p className="font-bold text-sm">Vague</p>
                   </button>
                 </div>
 
@@ -782,23 +806,17 @@ export function PredictionDetailScreen() {
                       : 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
                   }}
                 >
-                  {hasVoted
-                    ? `You Voted: ${userVote}`
-                    : submitting
-                    ? 'Submitting...'
-                    : 'Submit Vote'}
+                  {hasVoted ? `You Voted: ${userVote}` : submitting ? 'Submitting...' : 'Submit Vote'}
                 </Button>
 
                 <p className="text-xs text-muted-foreground text-center mt-4">
-                  {hasVoted
-                    ? 'Your vote has been recorded!'
-                    : 'Note: Voting does not affect your rank. Only your own predictions count!'}
+                  {hasVoted ? 'Your vote has been recorded!' : 'Note: Voting does not affect your rank. Only your own predictions count!'}
                 </p>
               </>
             )}
           </div>
 
-
+          {/* Author Card */}
           <div className="glass-card rounded-2xl p-4 flex items-center gap-3">
             <Avatar>
               <AvatarImage src={prediction.user?.avatar_url} />
@@ -812,17 +830,9 @@ export function PredictionDetailScreen() {
             <span className="text-xs text-muted-foreground">
               {getFormattedDate(prediction.created_at)}
             </span>
-          </div> 
+          </div>
         </motion.div>
-
-
-
- 
-
-
-
       </div>
-
       <MobileNav />
     </div>
   );
