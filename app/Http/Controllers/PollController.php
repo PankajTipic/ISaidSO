@@ -95,10 +95,11 @@ class PollController extends Controller
             ->withCount('answers')
             ->findOrFail($id);
 
-        if ($poll->visibility === 'private' && $poll->user_id !== Auth::id()) {
+        if ($poll->visibility === 'private' && $poll->user_id !== Auth::guard('sanctum')->id()) {
+            $userId = Auth::guard('sanctum')->id();
             $isSharedWithUser = $poll->groups()
-                ->whereHas('members', function ($q) {
-                $q->where('user_id', Auth::id());
+                ->whereHas('members', function ($q) use ($userId) {
+                $q->where('user_id', $userId);
             })->exists();
 
             if (!$isSharedWithUser) {

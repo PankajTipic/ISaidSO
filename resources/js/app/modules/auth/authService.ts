@@ -90,6 +90,10 @@ const authService = {
         await api.post('/logout');
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        sessionStorage.removeItem('dev_auth_verified');
+        // Signal DevGuard to re-lock immediately
+        window.dispatchEvent(new Event('dev-auth-cleared'));
     },
     getUser: async () => {
         const response = await api.get('/user');

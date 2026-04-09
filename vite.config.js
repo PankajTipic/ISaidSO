@@ -3,6 +3,7 @@ import laravel from 'laravel-vite-plugin'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
+import legacy from '@vitejs/plugin-legacy'
 
 export default defineConfig({
     plugins: [
@@ -15,6 +16,9 @@ export default defineConfig({
         }),
         react(),
         tailwindcss(),
+        legacy({
+            targets: ['defaults', 'not IE 11'],
+        }),
     ],
 
     resolve: {

@@ -13,6 +13,7 @@ import { motion } from 'motion/react';
 import { toast } from 'sonner';
 import { getAuth, postAuth } from '@/util/api';
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
+import { useAppSelector } from '@/app/store/hooks';
 
 interface GroupMember {
   id: number;
@@ -44,6 +45,7 @@ interface Group {
 
 export function GroupsScreen() {
   const navigate = useNavigate();
+  const isGuest = useAppSelector((state) => state.auth.isGuest);
   const [selectedTab, setSelectedTab] = useState('discover');
   const [searchQuery, setSearchQuery] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
@@ -105,6 +107,12 @@ const fetchGroups = async () => {
   }, [selectedTab]);
 
   const handleCreateGroup = async () => {
+    if (isGuest) {
+      toast.info('Please log in to create a group', {
+        action: { label: 'Log In', onClick: () => navigate('/auth') }
+      });
+      return;
+    }
     if (!newGroupName.trim()) {
       toast.error('Please enter a group name');
       return;
@@ -129,6 +137,12 @@ const fetchGroups = async () => {
   };
 
   const handleJoinGroup = async (groupId: number, groupName: string) => {
+    if (isGuest) {
+      toast.info('Please log in to join groups', {
+        action: { label: 'Log In', onClick: () => navigate('/auth') }
+      });
+      return;
+    }
     try {
       await postAuth(`/api/groups/${groupId}/join`);
       toast.success(`Joined ${groupName}!`);
@@ -166,66 +180,68 @@ const fetchGroups = async () => {
               </p>
             </div>
 
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  size="lg"
-                  className="shadow-lg shadow-primary/20"
-                  style={{
-                    background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-                  }}
-                >
-                  <Plus size={20} className="mr-2" />
-                  Create Group
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="glass-card sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Create New Group</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label>Group Name</Label>
-                    <Input
-                      placeholder="Enter group name"
-                      value={newGroupName}
-                      onChange={(e) => setNewGroupName(e.target.value)}
-                      className="glass-card"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Description</Label>
-                    <Textarea
-                      placeholder="Describe your group..."
-                      value={newGroupDescription}
-                      onChange={(e) => setNewGroupDescription(e.target.value)}
-                      className="glass-card"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="private"
-                      checked={isPrivate}
-                      onChange={(e) => setIsPrivate(e.target.checked)}
-                      className="rounded border-gray-300 text-primary focus:ring-primary"
-                    />
-                    <Label htmlFor="private" className="font-normal cursor-pointer">
-                      Make this group private
-                    </Label>
-                  </div>
+            {!isGuest && (
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
                   <Button
-                    className="w-full"
-                    onClick={handleCreateGroup}
+                    size="lg"
+                    className="shadow-lg shadow-primary/20"
                     style={{
                       background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
                     }}
                   >
+                    <Plus size={20} className="mr-2" />
                     Create Group
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent className="glass-card sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Create New Group</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <Label>Group Name</Label>
+                      <Input
+                        placeholder="Enter group name"
+                        value={newGroupName}
+                        onChange={(e) => setNewGroupName(e.target.value)}
+                        className="glass-card"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Description</Label>
+                      <Textarea
+                        placeholder="Describe your group..."
+                        value={newGroupDescription}
+                        onChange={(e) => setNewGroupDescription(e.target.value)}
+                        className="glass-card"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="private"
+                        checked={isPrivate}
+                        onChange={(e) => setIsPrivate(e.target.checked)}
+                        className="rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <Label htmlFor="private" className="font-normal cursor-pointer">
+                        Make this group private
+                      </Label>
+                    </div>
+                    <Button
+                      className="w-full"
+                      onClick={handleCreateGroup}
+                      style={{
+                        background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
+                      }}
+                    >
+                      Create Group
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
 
           {/* Unified Controls & Content */}
@@ -285,7 +301,7 @@ const fetchGroups = async () => {
                             <span>Created {new Date(group.createdAt).toLocaleDateString()}</span>
                           </div>
                         </div>
-                        {!group.isMember && (
+                        {!group.isMember && !isGuest && (
                           <Button
                             onClick={() => handleJoinGroup(group.id, group.name)}
                             disabled={group.isPrivate}

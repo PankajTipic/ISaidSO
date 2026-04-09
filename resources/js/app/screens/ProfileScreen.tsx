@@ -438,8 +438,8 @@ export function ProfileScreen() {
                     {user.questions?.length > 0 ? (
                       <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-hide">
                         {user.questions.map((q: any) => (
-                          <div key={q.id} className="p-5 rounded-2xl border border-border bg-muted/10 hover:bg-muted/20 transition-all group relative">
-                            <div className="pr-32">
+                          <div key={q.id} className="p-4 md:p-5 rounded-2xl border border-border bg-muted/10 hover:bg-muted/20 transition-all group relative flex flex-col md:flex-row md:items-start gap-4">
+                            <div className="flex-1">
                               <h4 className="font-bold text-base mb-3 leading-snug">{q.questions}</h4>
                               <div className="flex flex-wrap items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                                 <span className="flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-border/50 shadow-sm">
@@ -458,35 +458,35 @@ export function ProfileScreen() {
                                 )}
                               </div>
                             </div>
-                            <div className="absolute right-4 top-4 flex flex-row gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex flex-row md:flex-col gap-2 md:absolute md:right-4 md:top-4 md:opacity-0 md:group-hover:opacity-100 transition-all">
                               <Button
-                                onClick={() => openQuestionEdit(q)}
+                                onClick={(e) => { e.stopPropagation(); openQuestionEdit(q); }}
                                 size="icon"
                                 variant="outline"
-                                className="h-8 w-8 rounded-full bg-white shadow-md border-border"
+                                className="h-9 w-9 md:h-8 md:w-8 rounded-xl md:rounded-full bg-white shadow-sm border-border"
                               >
-                                <Edit2 size={14} className="text-primary" />
+                                <Edit2 size={16} className="text-primary" />
                               </Button>
                               <Button
-                                onClick={() => handleToggleVisibility(q)}
+                                onClick={(e) => { e.stopPropagation(); handleToggleVisibility(q); }}
                                 size="icon"
                                 variant="outline"
-                                className="h-8 w-8 rounded-full bg-white shadow-md border-border hover:bg-amber-50"
+                                className="h-9 w-9 md:h-8 md:w-8 rounded-xl md:rounded-full bg-white shadow-sm border-border hover:bg-amber-50"
                                 title={`Switch to ${q.visibility === 'public' ? 'private' : 'public'}`}
                               >
                                 {q.visibility === 'public' ? (
-                                  <Lock size={14} className="text-amber-500" />
+                                  <Lock size={16} className="text-amber-500" />
                                 ) : (
-                                  <Globe size={14} className="text-blue-500" />
+                                  <Globe size={16} className="text-blue-500" />
                                 )}
                               </Button>
                               <Button
-                                onClick={() => handleDeleteQuestion(q.id)}
+                                onClick={(e) => { e.stopPropagation(); handleDeleteQuestion(q.id); }}
                                 size="icon"
                                 variant="outline"
-                                className="h-8 w-8 rounded-full bg-white shadow-md border-border hover:bg-red-50"
+                                className="h-9 w-9 md:h-8 md:w-8 rounded-xl md:rounded-full bg-white shadow-sm border-border hover:bg-red-50"
                               >
-                                <Trash2 size={14} className="text-rose-500" />
+                                <Trash2 size={16} className="text-rose-500" />
                               </Button>
                             </div>
                           </div>
@@ -657,6 +657,89 @@ export function ProfileScreen() {
                   className="w-full h-14 rounded-2xl font-black text-lg bg-gradient-to-r from-primary to-pink-500 shadow-xl shadow-primary/20"
                 >
                   {isSaving ? <Loader2 size={18} className="animate-spin" /> : 'Save Changes'}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Question Edit Modal */}
+      <AnimatePresence>
+        {questionEditOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto"
+            onClick={() => setQuestionEditOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 30 }}
+              className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl border border-border my-auto relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl font-black text-foreground">Edit Prediction</h2>
+                <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setQuestionEditOpen(false)}>
+                  <X size={20} />
+                </Button>
+              </div>
+
+              <div className="space-y-5">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase tracking-widest ml-1 text-muted-foreground">The Question</Label>
+                  <Input
+                    value={editQuestionText}
+                    onChange={(e) => setEditQuestionText(e.target.value)}
+                    className="h-12 rounded-xl bg-muted/30 border-border"
+                    placeholder="Enter your prediction question..."
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase tracking-widest ml-1 text-muted-foreground">Visibility</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      type="button"
+                      variant={editQuestionVisibility === 'public' ? 'default' : 'outline'}
+                      onClick={() => setEditQuestionVisibility('public')}
+                      className="rounded-xl h-12 gap-2"
+                    >
+                      <Globe size={16} /> Public
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={editQuestionVisibility === 'private' ? 'default' : 'outline'}
+                      onClick={() => setEditQuestionVisibility('private')}
+                      className="rounded-xl h-12 gap-2"
+                    >
+                      <Lock size={16} /> Private
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase tracking-widest ml-1 text-muted-foreground">Prediction End Date</Label>
+                  <Input
+                    type="date"
+                    value={editQuestionEndDate}
+                    onChange={(e) => setEditQuestionEndDate(e.target.value)}
+                    className="h-12 rounded-xl bg-muted/30 border-border"
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1 ml-1">The date when the prediction outcome will be determined.</p>
+                </div>
+              </div>
+
+              <div className="mt-8 flex gap-3">
+                <Button
+                  onClick={handleUpdateQuestion}
+                  disabled={isUpdatingQuestion}
+                  className="w-full h-14 rounded-2xl font-black text-lg bg-gradient-to-r from-primary to-pink-500 shadow-xl shadow-primary/20"
+                >
+                  {isUpdatingQuestion ? <Loader2 size={18} className="animate-spin" /> : 'Update Prediction'}
                 </Button>
               </div>
             </motion.div>

@@ -1,5 +1,4 @@
 import { TopNav } from '@/app/components/TopNav';
-import { Footer } from '@/app/components/Footer';
 import { MobileNav } from '@/app/components/MobileNav';
 import { motion } from 'motion/react';
 import { Target, TrendingUp, Shield, Users, Award, Zap, Heart, Globe } from 'lucide-react';
@@ -188,7 +187,6 @@ export function AboutScreen() {
         </motion.div>
       </main>
 
-      <Footer />
       <MobileNav />
     </div>
   );

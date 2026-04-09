@@ -1,13 +1,4 @@
 
-
-
-
-
-
-
-
-
-
 import { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
@@ -22,6 +13,7 @@ import { useAppSelector } from '@/app/store/hooks';
 export function LeaderboardScreen() {
   const [selectedTab, setSelectedTab] = useState('global');
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [userStanding, setUserStanding] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,23 +26,24 @@ export function LeaderboardScreen() {
         setLoading(true);
         setError(null);
 
+        // Fetch Leaderboard
         const response = await getAuth(`/api/leaderboard?location_scope=${selectedTab}`);
-        const data = Array.isArray(response) ? response : response.data ?? [];
+        const data = response.data ?? response;
+        const list = Array.isArray(data) ? data : data.data ?? [];
 
-        // Sanitize accuracy (0–100) and score
-        const sanitized = data.map((item: any) => ({
+        // Sanitize accuracy (0–100)
+        const sanitized = list.map((item: any) => ({
           ...item,
           accuracy: Math.min(100, Math.max(0, Number(item.accuracy) || 0)),
-          score: Number(item.score) || 0,
         }));
 
-        // Sort: score desc → accuracy desc
-        const sorted = sanitized.sort((a: any, b: any) => {
-          if (b.score !== a.score) return b.score - a.score;
-          return b.accuracy - a.accuracy;
-        });
+        setLeaderboardData(sanitized);
 
-        setLeaderboardData(sorted);
+        // Fetch User Standing
+        const standingRes = await getAuth(`/api/leaderboard/my-standing?location_scope=${selectedTab}`);
+        if (standingRes.data) {
+          setUserStanding(standingRes.data);
+        }
       } catch (err: any) {
         console.error('Leaderboard fetch error:', err);
         setError(err.message || 'Failed to load leaderboard');
@@ -91,9 +84,13 @@ export function LeaderboardScreen() {
             <Trophy size={32} className="text-[#fbbf24]" />
             Leaderboard
           </h1>
-          <p className="text-muted-foreground mt-2 text-sm md:text-base">
-            Rankings based on total score from correct predictions
-          </p>
+          {/* <div className="mt-4 p-4 glass-card rounded-2xl border border-primary/20 bg-primary/5">
+            <p className="text-sm font-semibold mb-1">Scoring Transparency</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Rankings are based on <span className="text-foreground font-bold italic">Accuracy %</span>. 
+              Formula: <code className="bg-muted px-1.5 py-0.5 rounded text-primary">(Correct / Total) × 100</code>
+            </p>
+          </div> */}
         </div>
 
         {/* Tabs */}
@@ -130,6 +127,45 @@ export function LeaderboardScreen() {
           </Tabs>
         </div>
 
+
+        {/* User Info */}
+{/* Current User Strip */}
+{userStanding && (
+  <motion.div 
+    initial={{ y: 20, opacity: 0 }}
+    animate={{ y: 0, opacity: 1 }}
+    className="mb-4 rounded-2xl border border-white/20 p-4 shadow-xl flex items-center justify-between bg-gradient-to-r from-[#a855f7] to-[#7c3aed] text-white"
+  >
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#a855f7] font-bold text-lg">
+        #{userStanding.rank}
+      </div>
+      <div>
+        <p className="text-[10px] uppercase font-black text-white/70 leading-none mb-1 tracking-wider">
+          Your Standing
+        </p>
+        <p className="font-bold text-white">
+          Ranked #{userStanding.rank} Globally
+        </p>
+      </div>
+    </div>
+
+    <div className="text-right">
+      <p className="text-2xl font-black text-white leading-none">
+        {Number(userStanding.accuracy)?.toFixed(1)}%
+      </p>
+      <p className="text-[10px] text-white/70 font-bold mt-1 uppercase tracking-tight">
+        Accuracy
+      </p>
+    </div>
+  </motion.div>
+)}
+
+
+
+
+
+
         {loading ? (
           <div className="text-center py-16">
             <p className="text-muted-foreground animate-pulse text-lg">Loading leaderboard...</p>
@@ -150,65 +186,6 @@ export function LeaderboardScreen() {
           </div>
         ) : (
           <>
-            {/* Podium - Top 3 */}
-            <motion.div
-              className="glass-card rounded-2xl p-5 md:p-8 mb-8"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <div className="flex flex-col md:flex-row items-center md:items-end justify-center gap-6 md:gap-10">
-                {/* 2nd Place */}
-                {topThree[1] && (
-                  <div className="flex flex-col items-center w-full md:w-auto">
-                    <Avatar className="w-20 h-20 md:w-24 md:h-24 mb-3 ring-4 ring-gray-500/40">
-                      <AvatarImage src={topThree[1].user?.avatar_url} alt={topThree[1].user?.name} />
-                      <AvatarFallback>{topThree[1].user?.name?.[0] || '?'}</AvatarFallback>
-                    </Avatar>
-                    <div className="text-5xl md:text-6xl mb-2">🥈</div>
-                    <p className="font-bold text-lg md:text-xl text-center mb-1 truncate max-w-[180px]">
-                      {topThree[1].user?.name || 'Anonymous'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {topThree[1].score || 0} pts • {topThree[1].accuracy?.toFixed(1) || 0}%
-                    </p>
-                  </div>
-                )}
-
-                {/* 1st Place */}
-                {topThree[0] && (
-                  <div className="flex flex-col items-center w-full md:w-auto order-first md:order-none">
-                    <Avatar className="w-24 h-24 md:w-32 md:h-32 mb-3 ring-4 ring-yellow-500/50">
-                      <AvatarImage src={topThree[0].user?.avatar_url} alt={topThree[0].user?.name} />
-                      <AvatarFallback>{topThree[0].user?.name?.[0] || '?'}</AvatarFallback>
-                    </Avatar>
-                    <div className="text-6xl md:text-7xl mb-2">🥇</div>
-                    <p className="font-bold text-xl md:text-2xl text-center mb-1 truncate max-w-[220px]">
-                      {topThree[0].user?.name || 'Anonymous'}
-                    </p>
-                    <p className="text-base text-muted-foreground">
-                      {topThree[0].score || 0} pts • {topThree[0].accuracy?.toFixed(1) || 0}%
-                    </p>
-                  </div>
-                )}
-
-                {/* 3rd Place */}
-                {topThree[2] && (
-                  <div className="flex flex-col items-center w-full md:w-auto">
-                    <Avatar className="w-20 h-20 md:w-24 md:h-24 mb-3 ring-4 ring-amber-700/40">
-                      <AvatarImage src={topThree[2].user?.avatar_url} alt={topThree[2].user?.name} />
-                      <AvatarFallback>{topThree[2].user?.name?.[0] || '?'}</AvatarFallback>
-                    </Avatar>
-                    <div className="text-5xl md:text-6xl mb-2">🥉</div>
-                    <p className="font-bold text-lg md:text-xl text-center mb-1 truncate max-w-[180px]">
-                      {topThree[2].user?.name || 'Anonymous'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {topThree[2].score || 0} pts • {topThree[2].accuracy?.toFixed(1) || 0}%
-                    </p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
 
             {/* Full Leaderboard List */}
             <motion.div
@@ -262,18 +239,18 @@ export function LeaderboardScreen() {
                           </span>
                         )}
                       </div>
-                    </div>
+                    </div> 
 
-                    {/* Score & Accuracy */}
+                    {/* Accuracy Display */}
                     <div className="flex flex-col items-end text-right">
                       <div className="flex items-center gap-1.5">
-                        <Trophy size={14} className="text-[#fbbf24]" />
-                        <span className="font-bold text-base md:text-lg">
-                          {entry.score || 0}
+                        <TrendingUp size={14} className="text-primary" />
+                        <span className="font-black text-lg md:text-xl text-primary">
+                          {entry.accuracy?.toFixed(1) || 0}%
                         </span>
                       </div>
-                      <div className="text-[11px] md:text-xs text-muted-foreground">
-                        {entry.accuracy?.toFixed(1) || 0}%
+                      <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
+                        {entry.total_predictions || 0} Predictions
                       </div>
                     </div>
                   </motion.div>
@@ -281,14 +258,60 @@ export function LeaderboardScreen() {
               })}
             </motion.div>
 
-            {/* Footer Info */}
-            <div className="glass-card rounded-2xl p-4 mt-8 text-center text-sm text-muted-foreground">
-              Rankings are based on <span className="font-bold text-foreground">total score</span> from correct predictions.  
-              Higher score = better rank!
-            </div>
           </>
         )}
       </div>
+
+      {/* Floating User Standing Footer */}
+      {/* {userStanding && (
+        <div className="fixed bottom-[72px] left-0 right-0 z-30 px-4 md:hidden">
+          <motion.div 
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="max-w-md mx-auto rounded-2xl border border-white/20 p-4 shadow-2xl flex items-center justify-between bg-gradient-to-r from-[#a855f7] to-[#7c3aed] text-white"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#a855f7] font-bold text-lg">
+                #{userStanding.rank}
+              </div>
+              <div>
+                <p className="text-[10px] uppercase font-black text-white/70 leading-none mb-1 tracking-wider">Your Standing</p>
+                <p className="font-bold text-white">Ranked #{userStanding.rank} Globally</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-black text-white leading-none">{Number(userStanding.accuracy)?.toFixed(1)}%</p>
+              <p className="text-[10px] text-white/70 font-bold mt-1 uppercase tracking-tight">Accuracy</p>
+            </div>
+          </motion.div>
+        </div>
+      )} */}
+      
+      {/* Desktop Fixed Standing (Optional but nice) */}
+      {userStanding && (
+        <div className="hidden md:block fixed bottom-6 left-1/2 -translate-x-1/2 z-30 px-4 w-full max-w-2xl">
+          <motion.div 
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="rounded-2xl border border-white/20 p-4 shadow-2xl flex items-center justify-between bg-gradient-to-r from-[#a855f7] to-[#7c3aed] text-white"
+          >
+            {/* Same content as mobile but wider */}
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-[#a855f7] font-black text-xl">
+                #{userStanding.rank}
+              </div>
+              <div>
+                <p className="text-xs uppercase font-black text-white/70 mb-1 tracking-widest">Your Standing</p>
+                <p className="text-lg font-bold text-white">You are ranked #{userStanding.rank} in this category</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-3xl font-black text-white">{Number(userStanding.accuracy)?.toFixed(1)}%</p>
+              <p className="text-xs text-white/70 font-bold uppercase tracking-wider">Prediction Accuracy</p>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       <MobileNav />
     </div>

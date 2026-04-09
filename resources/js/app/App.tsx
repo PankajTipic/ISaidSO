@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 import { useAppDispatch } from './store/hooks';
 import { checkAuthStatus } from './modules/auth/authSlice';
 
+import { DevGuard } from './components/DevGuard';
+
 export default function App() {
   const dispatch = useAppDispatch();
 
@@ -15,7 +17,9 @@ export default function App() {
 
   return (
     <>
-      <RouterProvider router={router} />
+      <DevGuard>
+        <RouterProvider router={router} />
+      </DevGuard>
       <Toaster />
     </>
   );

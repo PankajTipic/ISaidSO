@@ -316,7 +316,7 @@ export async function refreshAccessToken() {
 //  Low-level helpers
 // ────────────────────────────────────────────────
 
-async function postPublic(endpoint, data) {
+export async function postPublic(endpoint, data) {
   const url = host + endpoint;
   const res = await fetch(url, {
     method: 'POST',
@@ -360,16 +360,18 @@ export async function deleteAuth(endpoint) {
 
 export async function postFormDataAuth(endpoint, formData) {
   const token = getAccessToken();
-  if (!token) throw new Error('Not authenticated');
 
   const url = host + endpoint;
+  const headers = {
+    'Accept': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const res = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      // Important: Do NOT set Content-Type when using FormData
-    },
+    headers: headers,
     body: formData,
   });
 
@@ -399,16 +401,19 @@ export async function postFormDataAuth(endpoint, formData) {
 
 export async function requestAuth(endpoint, method = 'GET', data = null) {
   let token = getAccessToken();
-  if (!token) {
-    throw new Error('Not authenticated');
-  }
+  // if (!token) {
+  //   throw new Error('Not authenticated');
+  // }
 
   const url = host + endpoint;
 
   const headers = {
     'Accept': 'application/json',
-    'Authorization': `Bearer ${token}`,
   };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   let body = null;
   if (data && method !== 'GET') {

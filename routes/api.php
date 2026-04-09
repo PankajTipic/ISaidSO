@@ -107,9 +107,9 @@ Route::apiResource('answer-types', \App\Http\Controllers\AnswerTypeController::c
 Route::get('/public-questions', [\App\Http\Controllers\QuestionController::class, 'publicIndex']);
 Route::get('/questions/{id}/for-answer', [\App\Http\Controllers\QuestionController::class, 'showForAnswer']);
 
-// Polls & Predictions chi PUBLIC list (index) – yala auth nako
-Route::get('/polls', [\App\Http\Controllers\PollController::class, 'index']);
-Route::get('/predictions', [\App\Http\Controllers\PredictionController::class, 'index']);
+// Polls & Predictions chi PUBLIC list & details – yala auth nako (Guest Access)
+Route::apiResource('polls', \App\Http\Controllers\PollController::class)->only(['index', 'show']);
+Route::apiResource('predictions', \App\Http\Controllers\PredictionController::class)->only(['index', 'show']);
 
 // Public Auth Routes
 Route::post('/register', [\App\Http\Controllers\AuthController::class, 'register']);
@@ -146,13 +146,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('points', \App\Http\Controllers\PointController::class);
     Route::apiResource('answers', \App\Http\Controllers\AnswerController::class);
 
-    // Poll Module (index already public → only show + store protected)
-    Route::apiResource('polls', \App\Http\Controllers\PollController::class)->only(['show', 'store']);
+    // Poll Module (index and show are public)
+    Route::apiResource('polls', \App\Http\Controllers\PollController::class)->only(['store']);
     Route::post('/polls/{id}/vote', [\App\Http\Controllers\PollController::class, 'vote']);
     Route::patch('/polls/{id}/verify', [\App\Http\Controllers\PollController::class, 'verify']);
 
-    // Prediction Module (index already public)
-    Route::apiResource('predictions', \App\Http\Controllers\PredictionController::class)->only(['show', 'store']);
+    // Prediction Module (index and show are public)
+    Route::apiResource('predictions', \App\Http\Controllers\PredictionController::class)->only(['store']);
     Route::patch('/predictions/{id}/verify', [\App\Http\Controllers\PredictionController::class, 'verify']);
     Route::patch('/predictions/{id}/toggle-visibility', [\App\Http\Controllers\PredictionController::class, 'toggleVisibility']);
 
@@ -160,6 +160,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/leaderboard', [\App\Http\Controllers\LeaderboardController::class, 'index']);
     Route::get('/leaderboard/my-standing', [\App\Http\Controllers\LeaderboardController::class, 'myStanding']);
 });
+
+// Dev Access Routes (Outside main auth but protected by its own logic)
+Route::post('/dev/verify', [\App\Http\Controllers\DevAccessController::class, 'verify']);
+Route::get('/dev/seed', [\App\Http\Controllers\DevAccessController::class, 'seed']);
 
 // ===================== ADMIN ROUTES (middleware 'admin') =====================
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {

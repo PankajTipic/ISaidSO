@@ -23,11 +23,13 @@ interface AuthState {
     isAuthChecking: boolean;
     isError: boolean;
     message: string;
+    isGuest: boolean;
 }
 
 // Pre-load from localStorage to prevent auth flicker on refresh
 const storedUserStr = localStorage.getItem('user');
 const storedToken = localStorage.getItem('access_token');
+const isGuestStored = localStorage.getItem('isGuest') === 'true';
 
 let preloadedUser = null;
 if (storedUserStr && storedToken) {
@@ -40,11 +42,12 @@ if (storedUserStr && storedToken) {
 
 const initialState: AuthState = {
     user: preloadedUser,
-    isAuthenticated: !!preloadedUser,
+    isAuthenticated: !!preloadedUser || isGuestStored,
     isLoading: false,
-    isAuthChecking: !preloadedUser, // If we have a user, we don't strictly need to block the UI, though we will still check in background
+    isAuthChecking: !preloadedUser && !isGuestStored,
     isError: false,
     message: '',
+    isGuest: isGuestStored,
 };
 
 // Async Thunks
@@ -88,6 +91,8 @@ export const checkAuthStatus = createAsyncThunk(
     'auth/checkStatus',
     async (_, thunkAPI) => {
         const token = localStorage.getItem('access_token');
+        const isGuest = localStorage.getItem('isGuest') === 'true';
+        if (isGuest) return thunkAPI.rejectWithValue('Guest Mode');
         if (!token) return thunkAPI.rejectWithValue('No token');
 
         try {
@@ -115,6 +120,22 @@ export const authSlice = createSlice({
             state.user = action.payload.user;
             state.isLoading = false;
             state.isError = false;
+        },
+        guestLogin: (state) => {
+            state.isAuthenticated = true;
+            state.isGuest = true;
+            state.user = {
+                id: -1,
+                name: 'Guest User',
+                username: 'Guest',
+                email: 'guest@example.com',
+                login_method: 'guest',
+                role: 'guest',
+                is_blocked: false,
+                is_profile_completed: true,
+            };
+            localStorage.setItem('isGuest', 'true');
+            localStorage.setItem('user', JSON.stringify(state.user));
         },
     },
     extraReducers: (builder) => {
@@ -160,6 +181,8 @@ export const authSlice = createSlice({
             .addCase(logoutUser.fulfilled, (state) => {
                 state.user = null;
                 state.isAuthenticated = false;
+                state.isGuest = false;
+                localStorage.removeItem('isGuest');
             })
             // Check Auth
             .addCase(checkAuthStatus.pending, (state) => {
@@ -182,5 +205,5 @@ export const authSlice = createSlice({
     },
 });
 
-export const { reset, setCredentials } = authSlice.actions;
+export const { reset, setCredentials, guestLogin } = authSlice.actions;
 export default authSlice.reducer;

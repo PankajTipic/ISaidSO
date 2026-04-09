@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:8000', 'http://127.0.0.1:8000', 'https://isaidso.tipic.in'],
+    'allowed_origins' => ['http://localhost:8000', 'http://127.0.0.1:8000', 'https://isaidso.tipic.in', 'https://isaidso.tipicqa.in'],
 
     'allowed_origins_patterns' => [],
 

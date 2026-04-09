@@ -28,7 +28,7 @@ export function TopNav({
 }: TopNavProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = useAppSelector((state) => state.auth.user);
+  const { user, isGuest } = useAppSelector((state) => state.auth);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -72,11 +72,11 @@ export function TopNav({
     { icon: Users, label: 'Groups', path: '/groups' },
     { icon: User, label: 'Profile', path: '/profile' },
     { icon: User, label: 'About', path: '/about' },
-  ];
+  ].filter(item => !(isGuest && item.label === 'Leaderboard'));
 
   return (
     <>
-      <div className="sticky top-0 z-50 glass-card bg-background/95 border-b border-border/50 backdrop-blur-sm">
+      <div className="sticky top-0 z-50 bg-background border-b border-border/50 md:glass-card md:bg-background/95 backdrop-blur-sm shadow-sm md:shadow-none">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-4">
             {/* Logo & Desktop Nav */}
@@ -205,17 +205,19 @@ export function TopNav({
                   <span className="absolute top-1 right-1 w-2 h-2 bg-pink-500 rounded-full"></span>
                 </Button>
 
-                <Button
-                  className="ml-2 rounded-full bg-gradient-to-r from-[#a855f7] to-[#ec4899] hover:opacity-90 shadow-lg shadow-purple-500/20"
-                  onClick={() => navigate('/create')}
-                >
-                  <Plus size={18} className="mr-1" />
-                  Create
-                </Button>
+                {!isGuest && (
+                  <Button
+                    className="ml-2 rounded-full bg-gradient-to-r from-[#a855f7] to-[#ec4899] hover:opacity-90 shadow-lg shadow-purple-500/20"
+                    onClick={() => navigate('/create')}
+                  >
+                    <Plus size={18} className="mr-1" />
+                    Create
+                  </Button>
+                )}
 
                 <Avatar
-                  className="w-9 h-9 cursor-pointer ml-2 ring-2 ring-[#a855f7]/30 hover:ring-[#a855f7]/60 transition-all"
-                  onClick={() => navigate('/profile')}
+                  className={`w-9 h-9 cursor-pointer ml-2 ring-2 ring-[#a855f7]/30 hover:ring-[#a855f7]/60 transition-all ${isGuest ? 'blur-[3px]' : ''}`}
+                  onClick={() => navigate(isGuest ? '/auth' : '/profile')}
                 >
                   <AvatarImage src={user?.avatar_url || user?.avatar || currentUser.avatar} alt={user?.username || currentUser.username} />
                   <AvatarFallback>{(user?.username || currentUser.username)?.[0] || '?'}</AvatarFallback>
@@ -223,17 +225,85 @@ export function TopNav({
               </div>
 
               {/* Mobile Menu Button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`lg:hidden glass rounded-full h-10 w-10 ${isSearchExpanded ? 'hidden' : 'flex'}`}
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              >
-                {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-              </Button>
+              {/* {!isGuest && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`lg:hidden glass rounded-full h-10 w-10 ${isSearchExpanded ? 'hidden' : 'flex'}`}
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                >
+                  {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                </Button>
+              )} */}
             </div>
           </div>
         </div>
+
+        {/* Mobile Menu Dropdown (moved inside for correct positioning) */}
+        {/* <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="lg:hidden absolute top-full left-0 right-0 z-40 bg-background border-b border-border shadow-2xl overflow-hidden"
+            >
+              <div className="p-4 space-y-2 max-h-[80vh] overflow-y-auto">
+                <div
+                  className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border cursor-pointer hover:bg-accent/50 mb-2"
+                  onClick={() => {
+                    navigate('/profile');
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  <Avatar className="w-12 h-12">
+                    <AvatarImage src={user?.avatar_url || user?.avatar || currentUser.avatar} alt={user?.username || currentUser.username} />
+                    <AvatarFallback>{(user?.username || currentUser.username)?.[0] || '?'}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className={`font-semibold text-foreground ${isGuest ? 'blur-[4px] select-none' : ''}`}>{user?.username || currentUser.username}</p>
+                    <p className="text-xs text-muted-foreground">Level {currentUser.level} • {currentUser.accuracy}% accurate</p>
+                  </div>
+                </div>
+
+                {navItems.map((item) => {
+                  const isActive = location.pathname === item.path;
+                  const Icon = item.icon;
+
+                  return (
+                    <button
+                      key={item.path}
+                      onClick={() => {
+                        navigate(item.path);
+                        setMobileMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive
+                        ? 'bg-gradient-to-r from-[#a855f7]/20 to-[#ec4899]/10 text-[#a855f7]'
+                        : 'text-muted-foreground hover:bg-muted/50'
+                        }`}
+                    >
+                      <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                      <span className="font-medium text-sm">{item.label}</span>
+                    </button>
+                  );
+                })}
+
+                <div className="pt-2 mt-2 border-t border-border/50">
+                  <Button
+                    className="w-full h-12 bg-gradient-to-r from-[#a855f7] to-[#ec4899] shadow-lg shadow-purple-500/20"
+                    onClick={() => {
+                      navigate('/create');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    <Plus size={18} className="mr-2" />
+                    Create New
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence> */}
       </div>
 
       {/* ==================== FULL SCREEN MOBILE SEARCH OVERLAY ==================== */}
@@ -322,71 +392,6 @@ export function TopNav({
         )}
       </AnimatePresence>
 
-      {/* Mobile Menu Dropdown (unchanged) */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden absolute top-full left-0 right-0 z-40 glass-card border-b border-border/50 overflow-hidden shadow-2xl"
-          >
-            <div className="p-4 space-y-2 max-h-[80vh] overflow-y-auto">
-              <div
-                className="flex items-center gap-3 p-3 rounded-xl glass-card cursor-pointer hover:bg-accent/50 mb-2"
-                onClick={() => {
-                  navigate('/profile');
-                  setMobileMenuOpen(false);
-                }}
-              >
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src={user?.avatar_url || user?.avatar || currentUser.avatar} alt={user?.username || currentUser.username} />
-                  <AvatarFallback>{(user?.username || currentUser.username)?.[0] || '?'}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-semibold text-foreground">{user?.username || currentUser.username}</p>
-                  <p className="text-xs text-muted-foreground">Level {currentUser.level} • {currentUser.accuracy}% accurate</p>
-                </div>
-              </div>
-
-              {navItems.map((item) => {
-                const isActive = location.pathname === item.path;
-                const Icon = item.icon;
-
-                return (
-                  <button
-                    key={item.path}
-                    onClick={() => {
-                      navigate(item.path);
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive
-                      ? 'bg-gradient-to-r from-[#a855f7]/20 to-[#ec4899]/10 text-[#a855f7]'
-                      : 'text-muted-foreground hover:bg-muted/50'
-                      }`}
-                  >
-                    <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-                    <span className="font-medium text-sm">{item.label}</span>
-                  </button>
-                );
-              })}
-
-              <div className="pt-2 mt-2 border-t border-border/50">
-                <Button
-                  className="w-full h-12 bg-gradient-to-r from-[#a855f7] to-[#ec4899] shadow-lg shadow-purple-500/20"
-                  onClick={() => {
-                    navigate('/create');
-                    setMobileMenuOpen(false);
-                  }}
-                >
-                  <Plus size={18} className="mr-2" />
-                  Create New
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </>
   );
 }

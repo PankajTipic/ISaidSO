@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
+import { useAppSelector } from '@/app/store/hooks';
+import { toast } from 'sonner';
 import {
   TrendingUp,
   Landmark,
@@ -40,6 +42,7 @@ const categoryColors = {
 
 export function PredictionCard({ prediction }: PredictionCardProps) {
   const navigate = useNavigate();
+  const isGuest = useAppSelector((state) => state.auth.isGuest);
 
   // Map category (from field.fields) to icon & color
   const categoryKey = prediction?.field?.fields?.toLowerCase() || 'trending';
@@ -83,6 +86,15 @@ export function PredictionCard({ prediction }: PredictionCardProps) {
       className="glass-card rounded-2xl p-5 cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl border border-border/50"
       whileHover={{ scale: 1.02 }}
       onClick={() => {
+        if (isGuest) {
+          toast.info('Please log in or create an account to view details', {
+            action: {
+              label: 'Log In',
+              onClick: () => navigate('/auth')
+            }
+          });
+          return;
+        }
         const path = prediction?.module_type === 'poll' ? '/poll' : '/prediction';
         navigate(`${path}/${prediction.id}`);
       }}
@@ -137,14 +149,16 @@ export function PredictionCard({ prediction }: PredictionCardProps) {
       {/* Creator Info */}
       <div className="flex items-center justify-between mb-4 px-1">
         <div className="flex items-center gap-2">
-          <Avatar className="w-8 h-8 ring-2 ring-background shadow-sm">
+          <Avatar className={`w-8 h-8 ring-2 ring-background shadow-sm ${isGuest ? 'blur-[2px]' : ''}`}>
             <AvatarImage src={prediction?.user?.avatar_url} alt={prediction?.user?.name} />
             <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
               {prediction?.user?.name?.[0] || '?'}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-foreground leading-none">{prediction?.user?.name || 'Anonymous'}</span>
+            <span className={`text-xs font-bold text-foreground leading-none ${isGuest ? 'blur-[4px] select-none' : ''}`}>
+                {prediction?.user?.name || 'Anonymous'}
+            </span>
             <span className="text-[10px] text-muted-foreground mt-1 font-medium italic">
               Success Rate: <span className="text-primary font-bold not-italic">{prediction?.user?.accuracy || '78'}%</span>
             </span>

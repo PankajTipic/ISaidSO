@@ -171,8 +171,8 @@ class LeaderboardController extends Controller
                     END, 2) as accuracy')
             )
             ->groupBy('user_id')
-            ->orderByDesc('score')
-            ->orderByDesc('accuracy');
+            ->orderByDesc('accuracy')
+            ->orderByDesc('total_predictions');
 
         // Optional filters (category, location, etc.)
         if ($request->has('category_id')) {
@@ -240,21 +240,27 @@ class LeaderboardController extends Controller
             ]);
         }
 
-        // Calculate rank (users with higher score)
-        $higherScoresQuery = UserScore::where('score', '>', $myScore->score);
-
+        // Calculate rank: users with higher accuracy, or same accuracy but more total predictions
+        $higherScoresQuery = UserScore::select('user_id')
+            ->groupBy('user_id')
+            ->havingRaw('ROUND(CASE WHEN SUM(total_predictions) > 0 THEN (SUM(correct_predictions) / SUM(total_predictions)) * 100 ELSE 0 END, 2) > ?', [$myScore->accuracy])
+            ->orHaving(function($q) use ($myScore) {
+                $q->havingRaw('ROUND(CASE WHEN SUM(total_predictions) > 0 THEN (SUM(correct_predictions) / SUM(total_predictions)) * 100 ELSE 0 END, 2) = ?', [$myScore->accuracy])
+                  ->havingRaw('SUM(total_predictions) > ?', [$myScore->total_predictions]);
+            });
+        
         if ($request->has('category_id')) {
             $higherScoresQuery->where('field_id', $request->get('category_id'));
         }
-
-        // Apply same location filters for rank calculation
         if ($locationScope === 'country' && $country) {
             $higherScoresQuery->where('country', $country);
         } elseif ($locationScope === 'city' && $city) {
             $higherScoresQuery->where('city', $city);
         }
 
-        $rank = $higherScoresQuery->count() + 1;
+        $rank = DB::table(DB::raw("({$higherScoresQuery->toSql()}) as superior_users"))
+            ->mergeBindings($higherScoresQuery->getQuery())
+            ->count() + 1;
 
         $myScore->rank = $rank;
 

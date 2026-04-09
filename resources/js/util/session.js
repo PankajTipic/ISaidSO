@@ -329,6 +329,9 @@ export function clearAuthData() {
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(TOKEN_EXPIRES_AT_KEY);
     localStorage.removeItem(USER_DATA_KEY);
+    sessionStorage.removeItem('dev_auth_verified');
+    // Notify DevGuard in the same tab to re-lock
+    window.dispatchEvent(new Event('dev-auth-cleared'));
     console.log('Auth data cleared');
   } catch (err) {
     console.error('Failed to clear auth data:', err);
