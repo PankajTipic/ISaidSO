@@ -9,6 +9,7 @@ use App\Http\Controllers\FieldController;
 use App\Http\Controllers\AnswerTypeController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\GroupController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PointController;
 use App\Http\Controllers\AnswerController;
 use App\Http\Controllers\AdminController;
@@ -134,6 +135,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/groups/{group}/join', [\App\Http\Controllers\GroupController::class, 'join']);
     Route::post('/groups/{group}/leave', [\App\Http\Controllers\GroupController::class, 'leave']);
     Route::get('/groups/{group}/questions', [\App\Http\Controllers\GroupController::class, 'questions']);
+    
+    // Group Join Requests & Management
+    Route::get('/groups/{group}/requests', [\App\Http\Controllers\GroupController::class, 'requests']);
+    Route::post('/groups/{group}/requests/{request_id}', [\App\Http\Controllers\GroupController::class, 'handleRequest']);
+    Route::post('/groups/{group}/members/add', [\App\Http\Controllers\GroupController::class, 'addMember']);
+    Route::delete('/groups/{group}/members/{user_id}', [\App\Http\Controllers\GroupController::class, 'removeMember']);
+
+    // Notifications
+    Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index']);
+    Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead']);
+    Route::delete('/notifications/{id}', [\App\Http\Controllers\NotificationController::class, 'destroy']);
 
     // Questions (CRUD + my questions)
     Route::apiResource('questions', \App\Http\Controllers\QuestionController::class);
@@ -159,11 +172,16 @@ Route::middleware('auth:sanctum')->group(function () {
     // Leaderboard (auth required because of location filters)
     Route::get('/leaderboard', [\App\Http\Controllers\LeaderboardController::class, 'index']);
     Route::get('/leaderboard/my-standing', [\App\Http\Controllers\LeaderboardController::class, 'myStanding']);
+    
 });
 
 // Dev Access Routes (Outside main auth but protected by its own logic)
 Route::post('/dev/verify', [\App\Http\Controllers\DevAccessController::class, 'verify']);
 Route::get('/dev/seed', [\App\Http\Controllers\DevAccessController::class, 'seed']);
+
+
+
+
 
 // ===================== ADMIN ROUTES (middleware 'admin') =====================
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
@@ -183,4 +201,9 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('/leaderboard', [\App\Http\Controllers\AdminController::class, 'leaderboard']);
     Route::get('/answers', [\App\Http\Controllers\AdminController::class, 'answers']);
     Route::get('/questions/{id}', [\App\Http\Controllers\AdminController::class, 'questionDetails']);
+
+
+
+
+
 });

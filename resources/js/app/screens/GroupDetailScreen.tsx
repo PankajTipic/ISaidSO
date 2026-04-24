@@ -5,10 +5,13 @@ import { TopNav } from '@/app/components/TopNav';
 import { Button } from '@/app/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
-import { Loader2, MessageSquare, ChevronRight, Gavel, BarChart3, Clock, Users, Lock, Globe, ArrowLeft, LogOut } from 'lucide-react';
+import { Loader2, MessageSquare, ChevronRight, Gavel, BarChart3, Clock, Users, Lock, Globe, ArrowLeft, LogOut, UserPlus, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
-import { getAuth, postAuth } from '@/util/api';
+import { getAuth, postAuth, deleteAuth } from '@/util/api';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/app/components/ui/dialog';
+import { Input } from '@/app/components/ui/input';
+import { Label } from '@/app/components/ui/label';
 
 interface GroupMember {
     id: number;
@@ -43,6 +46,8 @@ interface Group {
     memberCount: number;
     isPrivate: boolean;
     isMember: boolean;
+    isOwner: boolean;
+    pendingRequest?: boolean;
     createdAt: string;
     members?: GroupMember[];
 }
@@ -54,8 +59,13 @@ export function GroupDetailScreen() {
     const [loading, setLoading] = useState(true);
     const [group, setGroup] = useState<Group | null>(null);
     const [questions, setQuestions] = useState<GroupQuestion[]>([]);
+    const [joinRequests, setJoinRequests] = useState<any[]>([]);
+    const [requestsLoading, setRequestsLoading] = useState(false);
 
     const [leaving, setLeaving] = useState(false);
+    const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
+    const [newMemberUsername, setNewMemberUsername] = useState('');
+    const [addingMember, setAddingMember] = useState(false);
 
     const fetchGroupDetails = async () => {
         try {
@@ -66,6 +76,10 @@ export function GroupDetailScreen() {
             ]);
             setGroup(groupRes);
             setQuestions(questionsRes.data || []);
+
+            if (groupRes.isOwner) {
+                fetchJoinRequests();
+            }
         } catch (error: any) {
             console.error('Failed to fetch group details', error);
             toast.error('Failed to load group details');
@@ -74,6 +88,56 @@ export function GroupDetailScreen() {
             }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchJoinRequests = async () => {
+        try {
+            setRequestsLoading(true);
+            const res = await getAuth(`/api/groups/${id}/requests`);
+            setJoinRequests(res);
+        } catch (error) {
+            console.error('Failed to fetch join requests', error);
+        } finally {
+            setRequestsLoading(false);
+        }
+    };
+
+    const handleJoinRequest = async (requestId: number, action: 'accept' | 'reject') => {
+        try {
+            await postAuth(`/api/groups/${id}/requests/${requestId}`, { action });
+            toast.success(`Request ${action === 'accept' ? 'accepted' : 'rejected'}`);
+            fetchJoinRequests();
+            if (action === 'accept') fetchGroupDetails();
+        } catch (error) {
+            toast.error('Failed to handle request');
+        }
+    };
+
+    const handleAddMember = async () => {
+        if (!newMemberUsername.trim()) return;
+        try {
+            setAddingMember(true);
+            await postAuth(`/api/groups/${id}/members/add`, { username: newMemberUsername });
+            toast.success('Member added successfully');
+            setIsAddMemberDialogOpen(false);
+            setNewMemberUsername('');
+            fetchGroupDetails();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to add member');
+        } finally {
+            setAddingMember(false);
+        }
+    };
+
+    const handleRemoveMember = async (userId: number) => {
+        if (!window.confirm('Are you sure you want to remove this member?')) return;
+        try {
+            await deleteAuth(`/api/groups/${id}/members/${userId}`);
+            toast.success('Member removed');
+            fetchGroupDetails();
+        } catch (error) {
+            toast.error('Failed to remove member');
         }
     };
 
@@ -192,13 +256,51 @@ export function GroupDetailScreen() {
         </div>
     </div>
 
-    {group.isMember && (
+    {group.isOwner && (
+        <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
+            <DialogTrigger asChild>
+                <Button className="rounded-full shadow-lg shadow-primary/20 bg-gradient-to-r from-primary to-purple-600">
+                    <UserPlus size={18} className="mr-2" />
+                    Add Member
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="glass-card sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Add Direct Member</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="username">Username</Label>
+                        <Input
+                            id="username"
+                            placeholder="Enter username"
+                            value={newMemberUsername}
+                            onChange={(e) => setNewMemberUsername(e.target.value)}
+                            className="glass-card"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button
+                        onClick={handleAddMember}
+                        disabled={addingMember || !newMemberUsername.trim()}
+                        className="w-full"
+                    >
+                        {addingMember ? <Loader2 size={18} className="animate-spin mr-2" /> : null}
+                        Add Member
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )}
+
+    {group.isMember && !group.isOwner && (
         <Button
             variant="destructive"
             size="lg"
             disabled={leaving}
             onClick={handleLeaveGroup}
-            className="gap-2 min-w-[140px]"
+            className="gap-2 min-w-[140px] rounded-full"
         >
             {leaving ? (
                 <>
@@ -226,6 +328,16 @@ export function GroupDetailScreen() {
                         <TabsTrigger value="members" className="px-8 py-2.5 rounded-md min-w-[120px]">
                             Members
                         </TabsTrigger>
+                        {group.isOwner && (
+                            <TabsTrigger value="requests" className="px-8 py-2.5 rounded-md min-w-[120px] relative">
+                                Requests
+                                {joinRequests.length > 0 && (
+                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-[10px] text-white rounded-full flex items-center justify-center font-bold">
+                                        {joinRequests.length}
+                                    </span>
+                                )}
+                            </TabsTrigger>
+                        )}
                     </TabsList>
 
                     <TabsContent value="questions" className="mt-0 focus:outline-none">
@@ -330,12 +442,76 @@ export function GroupDetailScreen() {
                                             </p>
                                             <p className="text-xs text-muted-foreground truncate font-medium">@{member.username}</p>
                                         </div>
+                                        {group.isOwner && member.id !== group.id && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleRemoveMember(member.id)}
+                                                className="h-8 w-8 text-muted-foreground hover:text-red-500 rounded-full"
+                                            >
+                                                <X size={16} />
+                                            </Button>
+                                        )}
                                     </motion.div>
                                 ))}
                             </div>
                         ) : (
                             <div className="py-20 text-center">
                                 <p className="text-muted-foreground">No members found</p>
+                            </div>
+                        )}
+                    </TabsContent>
+
+                    <TabsContent value="requests" className="mt-0 focus:outline-none">
+                        {joinRequests.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {joinRequests.map((req) => (
+                                    <motion.div
+                                        key={req.id}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="flex items-center justify-between p-4 rounded-2xl bg-muted border border-border shadow-md"
+                                    >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <Avatar className="w-10 h-10 border border-border">
+                                                <AvatarImage src={req.user.avatar || undefined} />
+                                                <AvatarFallback className="bg-primary/10 text-primary">
+                                                    {req.user.username[0].toUpperCase()}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div className="min-w-0">
+                                                <p className="font-bold text-sm truncate">@{req.user.username}</p>
+                                                <p className="text-[10px] text-muted-foreground">Requested {new Date(req.created_at).toLocaleDateString()}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleJoinRequest(req.id, 'accept')}
+                                                className="h-8 bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20 rounded-full text-xs font-bold px-4"
+                                            >
+                                                Accept
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => handleJoinRequest(req.id, 'reject')}
+                                                className="h-8 text-red-500 hover:bg-red-500/10 rounded-full text-xs font-bold px-4"
+                                            >
+                                                Reject
+                                            </Button>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="py-20 text-center bg-muted/30 rounded-3xl border border-dashed border-border">
+                                <div className="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <UserPlus size={32} className="text-muted-foreground/30" />
+                                </div>
+                                <h4 className="font-bold text-lg mb-1">No pending requests</h4>
+                                <p className="text-muted-foreground text-sm">When users request to join your private group, they'll appear here.</p>
                             </div>
                         )}
                     </TabsContent>

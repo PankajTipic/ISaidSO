@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Group;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use App\Models\GroupJoinRequest;
+use App\Notifications\JoinRequestNotification;
 
 class GroupController extends Controller
 {
@@ -89,7 +92,24 @@ class GroupController extends Controller
 
     public function show($id)
     {
-        $group = Group::with(['members:id,name,username,avatar'])->withCount('members')->findOrFail($id);
+        $userId = Auth::id();
+        $group = Group::withCount('members')->findOrFail($id);
+
+        $isOwner = $group->user_id === $userId;
+        $isMember = $group->members()->where('user_id', $userId)->exists();
+
+        // Load members only for members or owner
+        if ($isMember || $isOwner) {
+            $group->load('members:id,name,username,avatar');
+        }
+
+        $pendingRequest = null;
+        if (!$isMember && !$isOwner) {
+            $pendingRequest = GroupJoinRequest::where('group_id', $id)
+                ->where('user_id', $userId)
+                ->where('status', 'pending')
+                ->first();
+        }
 
         return response()->json([
             'id' => $group->id,
@@ -97,9 +117,11 @@ class GroupController extends Controller
             'description' => $group->description,
             'memberCount' => $group->members_count,
             'isPrivate' => (bool)$group->is_private,
-            'isMember' => $group->members()->where('user_id', Auth::id())->exists(),
+            'isMember' => $isMember,
+            'isOwner' => $isOwner,
+            'pendingRequest' => $pendingRequest ? true : false,
             'createdAt' => $group->created_at->toISOString(),
-            'members' => $group->members,
+            'members' => ($isMember || $isOwner) ? $group->members : [],
         ]);
     }
 
@@ -161,17 +183,114 @@ class GroupController extends Controller
 
     public function join(Request $request, Group $group)
     {
-        if ($group->members()->where('user_id', Auth::id())->exists()) {
+        $userId = Auth::id();
+        if ($group->members()->where('user_id', $userId)->exists()) {
             return response()->json(['message' => 'Already joined'], 400);
         }
 
         if ($group->is_private) {
-            return response()->json(['message' => 'Cannot join private group directly'], 403);
+            // Check if request already exists
+            $existing = GroupJoinRequest::where('group_id', $group->id)
+                ->where('user_id', $userId)
+                ->first();
+            
+            if ($existing) {
+                if ($existing->status === 'pending') {
+                    return response()->json(['message' => 'Join request already pending'], 400);
+                }
+                // If rejected, maybe allow re-requesting? For now, just update to pending.
+                $existing->update(['status' => 'pending']);
+            } else {
+                GroupJoinRequest::create([
+                    'group_id' => $group->id,
+                    'user_id' => $userId,
+                    'status' => 'pending'
+                ]);
+            }
+
+            // Notify Owner
+            $owner = $group->user;
+            $requester = Auth::user();
+            $owner->notify(new JoinRequestNotification($requester, $group));
+
+            return response()->json(['message' => 'Join request sent to group owner']);
         }
 
-        $group->members()->attach(Auth::id());
+        $group->members()->attach($userId);
 
         return response()->json(['message' => 'Successfully joined group']);
+    }
+
+    public function requests(Group $group)
+    {
+        if ($group->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $requests = $group->joinRequests()->with('user:id,name,username,avatar')->where('status', 'pending')->get();
+
+        return response()->json($requests);
+    }
+
+    public function handleRequest(Request $request, Group $group, $requestId)
+    {
+        if ($group->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $joinRequest = GroupJoinRequest::where('group_id', $group->id)->findOrFail($requestId);
+        
+        $validated = $request->validate([
+            'action' => 'required|in:accept,reject'
+        ]);
+
+        if ($validated['action'] === 'accept') {
+            $joinRequest->update(['status' => 'accepted']);
+            // Add user to group
+            if (!$group->members()->where('user_id', $joinRequest->user_id)->exists()) {
+                $group->members()->attach($joinRequest->user_id);
+            }
+            return response()->json(['message' => 'Request accepted and user added to group']);
+        } else {
+            $joinRequest->update(['status' => 'rejected']);
+            return response()->json(['message' => 'Request rejected']);
+        }
+    }
+
+    public function addMember(Request $request, Group $group)
+    {
+        if ($group->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'username' => 'required|string|exists:users,username'
+        ]);
+
+        $user = User::where('username', $validated['username'])->firstOrFail();
+
+        if ($group->members()->where('user_id', $user->id)->exists()) {
+            return response()->json(['message' => 'User is already a member'], 400);
+        }
+
+        $group->members()->attach($user->id);
+
+        return response()->json(['message' => 'User added successfully', 'user' => $user]);
+    }
+
+    public function removeMember(Request $request, Group $group, $userId)
+    {
+        if ($group->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if ($userId == $group->user_id) {
+            return response()->json(['message' => 'Cannot remove yourself (the owner)'], 400);
+        }
+
+        $group->members()->detach($userId);
+
+        return response()->json(['message' => 'Member removed successfully']);
     }
 
     

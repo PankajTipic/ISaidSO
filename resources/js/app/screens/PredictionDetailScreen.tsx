@@ -875,7 +875,9 @@ import {
   CheckCircle2,
   XCircle,
   HelpCircle,
+  ExternalLink,
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useAppSelector } from '@/app/store/hooks';
@@ -1182,9 +1184,52 @@ export function PredictionDetailScreen() {
                       </span>
                     </div>
 
-                    <p className="text-xs text-muted-foreground">
-                      Based on {totalValidVotes} vote{totalValidVotes !== 1 ? 's' : ''}
-                    </p>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <button className="flex items-center justify-center gap-1.5 mx-auto px-3 py-1.5 rounded-full bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/20 text-blue-400 transition-colors group">
+                          <span className="text-xs font-medium">
+                            Based on {totalValidVotes} vote{totalValidVotes !== 1 ? 's' : ''}
+                          </span>
+                          <ExternalLink size={10} className="opacity-50 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent className="glass-card border-border sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle className="text-lg font-bold">Community Voting Details</DialogTitle>
+                        </DialogHeader>
+                        <div className="max-h-[60vh] overflow-y-auto space-y-2.5 pr-1">
+                          {answers.map((v: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-muted/30 border border-border/20">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="w-10 h-10 border border-border/50">
+                                  <AvatarImage src={v.user?.avatar_url} />
+                                  <AvatarFallback className="bg-muted text-xs font-bold">
+                                    {v.user?.username?.charAt(0).toUpperCase() || '?'}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="text-sm font-bold">@{v.user?.username || 'anonymous'}</p>
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{v.user?.name || 'Voter'}</p>
+                                </div>
+                              </div>
+                              <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black tracking-widest border-2 shadow-sm ${
+                                v.answer?.toLowerCase() === 'yes' ? 'bg-green-500/10 border-green-500/20 text-green-400' :
+                                v.answer?.toLowerCase() === 'no' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
+                                'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                              }`}>
+                                {v.answer?.toUpperCase()}
+                              </div>
+                            </div>
+                          ))}
+                          {answers.length === 0 && (
+                            <div className="text-center py-8">
+                              <Users size={40} className="mx-auto text-muted-foreground/20 mb-2" />
+                              <p className="text-muted-foreground text-sm font-medium">No votes yet</p>
+                            </div>
+                          )}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 )}
               </div>
@@ -1265,9 +1310,52 @@ export function PredictionDetailScreen() {
                         Vague {vaguePercentage}%
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground text-center">
-                      Based on {totalValidVotes} vote{totalValidVotes !== 1 ? 's' : ''}
-                    </p>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <button className="flex items-center justify-center gap-1.5 mx-auto px-3 py-1.5 rounded-full bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/20 text-blue-400 transition-colors group">
+                          <span className="text-xs font-medium">
+                            Based on {totalValidVotes} vote{totalValidVotes !== 1 ? 's' : ''}
+                          </span>
+                          <ExternalLink size={10} className="opacity-50 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent className="glass-card border-border sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle className="text-lg font-bold">Community Voting Details</DialogTitle>
+                        </DialogHeader>
+                        <div className="max-h-[60vh] overflow-y-auto space-y-2.5 pr-1 custom-scrollbar">
+                          {answers.map((v: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-muted/20 border border-border/10">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="w-9 h-9 border border-border/50">
+                                  <AvatarImage src={v.user?.avatar_url} />
+                                  <AvatarFallback className="bg-muted text-xs">
+                                    {v.user?.username?.charAt(0).toUpperCase() || '?'}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="text-sm font-semibold">@{v.user?.username || 'anonymous'}</p>
+                                  <p className="text-[10px] text-muted-foreground">{v.user?.name || 'Voter'}</p>
+                                </div>
+                              </div>
+                              <div className={`px-3 py-1 rounded-lg text-[10px] font-black tracking-wider border ${
+                                v.answer?.toLowerCase() === 'yes' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
+                                v.answer?.toLowerCase() === 'no' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
+                                'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                              }`}>
+                                {v.answer?.toUpperCase()}
+                              </div>
+                            </div>
+                          ))}
+                          {answers.length === 0 && (
+                            <div className="text-center py-8">
+                              <Users size={40} className="mx-auto text-muted-foreground/20 mb-2" />
+                              <p className="text-muted-foreground text-sm font-medium">No votes yet</p>
+                            </div>
+                          )}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 )}
               </div>

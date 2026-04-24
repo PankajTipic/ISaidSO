@@ -29,9 +29,13 @@ class Group extends Model
     public function questions()
     {
         return $this->belongsToMany(Question::class , 'group_question');
+    }    public function owner()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
-
-
-
+    public function joinRequests()
+    {
+        return $this->hasMany(GroupJoinRequest::class);
+    }
 }

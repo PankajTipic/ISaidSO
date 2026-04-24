@@ -89,7 +89,7 @@ class ScoreService
     //     $question->update(['rewards_distributed' => true]);
     // }
 
-    public function awardPoints(int $userId, ?int $fieldId, bool $isCorrect, int $points = 10)
+    public function awardPoints(int $userId, ?int $fieldId, bool $isCorrect, int $points = 10, ?Question $prediction = null)
     {
         // Find or create the score record for this user + field
         $score = UserScore::firstOrCreate(
@@ -101,78 +101,115 @@ class ScoreService
                 'total_predictions' => 0,
                 'correct_predictions' => 0,
                 'score' => 0,
+                'total_score' => 0,
                 'accuracy' => 0.00,
-                'location_scope' => 'global', // or 'country'/'city' if needed
+                'location_scope' => 'global',
                 'country' => null,
                 'city' => null,
+                'avg_votes' => 0,
             ]
         );
 
         // Increment total predictions
         $score->total_predictions += 1;
 
-        // Award points and correct prediction if correct
         if ($isCorrect) {
             $score->correct_predictions += 1;
-            $score->score += $points;
+            $score->score += $points; // Legacy flat points
+
+            // Apply new weighted scoring if prediction context is provided
+            if ($prediction) {
+                $weightedScore = $this->calculateWeightedScore($prediction, true);
+                $score->total_score += $weightedScore;
+            }
         }
 
-        // Calculate and cap accuracy (safe range: 0–100)
+        // Update accuracy
         if ($score->total_predictions > 0) {
             $rawAccuracy = ($score->correct_predictions / $score->total_predictions) * 100;
             $score->accuracy = round(min(100, max(0, $rawAccuracy)), 2);
-        } else {
-            $score->accuracy = 0.00;
         }
 
-        // Save safely — this line should now never throw "out of range"
+        // Update avg_votes across all predictions for this user in this field
+        $score->avg_votes = $this->calculateAvgVotes($userId, $fieldId);
+
         $score->save();
     }
 
     /**
-     * Update an individual user's score based on their answer.
+     * Calculate the weighted score for a prediction based on accuracy, confidence, engagement, and recency.
      */
-    protected function updateUserScore(Answer $answer, Question $question)
+    public function calculateWeightedScore(Question $prediction, bool $isCorrect): float
     {
-        $userId = $answer->user_id;
-        $user = User::find($userId);
+        if (!$isCorrect) return 0;
 
-        if (!$user)
-            return;
+        $truthScore = 1.0;
+        $confidence = $this->getConfidenceMultiplier($prediction);
+        $engagement = $this->getEngagementMultiplier($prediction);
+        $timeDecay = $this->getTimeDecayMultiplier($prediction);
 
-        $userScore = UserScore::firstOrCreate(
-        ['user_id' => $userId, 'field_id' => $question->field_id],
-        [
-            'location_scope' => $question->location_scope ?? 'global',
-            'country' => $user->country,
-            'city' => $user->city,
-            'total_predictions' => 0,
-            'correct_predictions' => 0,
-            'score' => 0,
-        ]
-        );
+        return $truthScore * $confidence * $engagement * $timeDecay;
+    }
 
-        // Sync location
-        $userScore->country = $user->country;
-        $userScore->city = $user->city;
+    protected function getConfidenceMultiplier(Question $prediction): float
+    {
+        $yes = $prediction->answers()->whereRaw('LOWER(answer) = "yes"')->count();
+        $no = $prediction->answers()->whereRaw('LOWER(answer) = "no"')->count();
+        $vague = $prediction->answers()->whereRaw('LOWER(answer) = "vague"')->count();
+        $total = $yes + $no + $vague;
 
-        $isCorrect = $answer->answer === $question->correct_answer;
+        if ($total === 0) return 1.0;
 
-        if ($isCorrect) {
-            $userScore->correct_predictions += 1;
-            $userScore->score += 10;
+        $counts = [
+            'yes' => ($yes / $total) * 100,
+            'no' => ($no / $total) * 100,
+            'vague' => ($vague / $total) * 100
+        ];
 
-            // Update legacy Point model
-            Point::updateOrCreate(
-            ['user_id' => $userId],
-            ['points' => DB::raw('points + 10')]
-            );
-        }
+        arsort($counts);
+        $values = array_values($counts);
+        $winnerPct = $values[0];
+        $secondPct = $values[1] ?? 0;
+        $gap = $winnerPct - $secondPct;
 
-        if ($userScore->total_predictions > 0) {
-            $userScore->accuracy = ($userScore->correct_predictions / $userScore->total_predictions) * 100;
-        }
+        if ($gap >= 90) return 1.5;
+        if ($gap >= 20) return 1.2;
+        if ($gap >= 5)  return 1.0;
+        return 0; // Too close
+    }
 
-        $userScore->save();
+    protected function getEngagementMultiplier(Question $prediction): float
+    {
+        $totalVotes = $prediction->answers()->count();
+        // Formula: 1 + 0.05 * ln(1 + total_votes)
+        return 1 + (0.05 * log(1 + $totalVotes));
+    }
+
+    protected function getTimeDecayMultiplier(Question $prediction): float
+    {
+        $ageInDays = Carbon::parse($prediction->created_at)->diffInDays(now());
+
+        if ($ageInDays <= 7) return 1.0;
+        if ($ageInDays <= 30) return 0.75;
+        if ($ageInDays <= 90) return 0.50;
+        return 0.25;
+    }
+
+    protected function calculateAvgVotes(int $userId, ?int $fieldId): float
+    {
+        // Average votes of all predictions this user participated in within this field
+        $avg = Answer::where('user_id', $userId)
+            ->whereHas('question', function ($q) use ($fieldId) {
+                $q->where('module_type', 'prediction');
+                if ($fieldId) $q->where('field_id', $fieldId);
+            })
+            ->with('question')
+            ->get()
+            ->avg(function ($answer) {
+                return $answer->question->answers()->count();
+            });
+
+        return (float) ($avg ?? 0);
     }
 }
+

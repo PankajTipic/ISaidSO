@@ -173,69 +173,28 @@ $prediction->update(['correct_answer' => $correctAnswer, 'status' => 'closed']);
 
         // Get all users who participated in this prediction
         $allVoters = \App\Models\Answer::where('question_id', $prediction->id)->get();
+        $scoreService = new \App\Services\ScoreService();
 
         foreach ($allVoters as $vote) {
-            $voter = $vote->user; // Assuming answer has user relation loaded
-            if (!$voter) {
-                $voter = \App\Models\User::find($vote->user_id);
-            }
-
-            $userScore = UserScore::firstOrCreate(
-            ['user_id' => $vote->user_id, 'field_id' => $prediction->field_id],
-            [
-                'location_scope' => $prediction->location_scope ?? 'global',
-                'country' => $voter->country,
-                'city' => $voter->city,
-            ]
+            $isCorrect = (strtolower($vote->answer) === strtolower($correctAnswer));
+            
+            $scoreService->awardPoints(
+                $vote->user_id,
+                $prediction->field_id,
+                $isCorrect,
+                10,
+                $prediction
             );
-
-            // Sync location if it changed or was empty
-            if ($userScore->country !== $voter->country || $userScore->city !== $voter->city) {
-                $userScore->country = $voter->country;
-                $userScore->city = $voter->city;
-            }
-
-            $userScore->total_predictions += 1;
-
-            if ($vote->answer === $correctAnswer) {
-                $userScore->correct_predictions += 1;
-                $userScore->score += 10;
-            }
-
-            if ($userScore->total_predictions > 0) {
-                $userScore->accuracy = ($userScore->correct_predictions / $userScore->total_predictions) * 100;
-            }
-            $userScore->save();
         }
 
-        // Also update creator's score for posting a resolved prediction
-        $creator = \App\Models\User::find($prediction->user_id);
-        $creatorScore = UserScore::firstOrCreate(
-        ['user_id' => $prediction->user_id, 'field_id' => $prediction->field_id],
-        [
-            'location_scope' => $prediction->location_scope ?? 'global',
-            'country' => $creator->country,
-            'city' => $creator->city,
-        ]
+        // Handle creator bonus
+        $scoreService->awardPoints(
+            $prediction->user_id,
+            $prediction->field_id,
+            ($validated['result'] === 'pass'), // Creator gets points if result is PASS
+            5,
+            $prediction
         );
-
-        // Sync location if it changed or was empty
-        if ($creatorScore->country !== $creator->country || $creatorScore->city !== $creator->city) {
-            $creatorScore->country = $creator->country;
-            $creatorScore->city = $creator->city;
-        }
-        $creatorScore->total_predictions += 1;
-
-        // If the prediction was fulfilled (pass), give creator a bonus
-        if ($validated['result'] === 'pass') {
-            $creatorScore->correct_predictions += 1;
-            $creatorScore->score += 5; // Creator bonus for successful result
-        }
-
-        if ($creatorScore->total_predictions > 0) {
-            $creatorScore->accuracy = ($creatorScore->correct_predictions / $creatorScore->total_predictions) * 100;
-        }
-        $creatorScore->save();
 
         return response()->json([
             'message' => 'Prediction verified successfully',

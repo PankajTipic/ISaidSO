@@ -443,6 +443,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { TopNav } from '@/app/components/TopNav';
 import { MobileNav } from '@/app/components/MobileNav';
+import { useAppSelector } from '@/app/store/hooks';
 
 // Import your API helpers
 import { getAuth, postAuth } from '@/util/api';
@@ -479,6 +480,8 @@ interface MyGroup {
 // ────────────────────────────────────────────────
 export function CreatePredictionScreen() {
   const navigate = useNavigate();
+  const { user: currentUser } = useAppSelector((state) => state.auth);
+  const isAdmin = currentUser?.role === 'admin';
 
   // Form state
   const [activeTab, setActiveTab] = useState('prediction');
@@ -625,6 +628,7 @@ export function CreatePredictionScreen() {
     }
   };
 
+
   const handlePublishPoll = async () => {
     if (!text.trim()) return toast.error('Please enter a poll question');
     if (selectedFieldId === null) return toast.error('Please select a category');
@@ -767,34 +771,37 @@ export function CreatePredictionScreen() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-semibold ml-1">Category</Label>
-                    <Dialog open={isFieldModalOpen} onOpenChange={setIsFieldModalOpen}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8 glass-card border border-border hover:bg-muted">
-                          <Plus size={14} className="mr-1.5" /> Add Category
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="glass-card border border-border">
-                        <DialogHeader>
-                          <DialogTitle>Add New Category</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <Input
-                            placeholder="e.g. Technology, Sports..."
-                            value={newFieldName}
-                            onChange={(e) => setNewFieldName(e.target.value)}
-                            className="glass-card border-border"
-                          />
-                          <Button
-                            className="w-full"
-                            onClick={handleAddField}
-                            disabled={isAddingField}
-                            style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
-                          >
-                            {isAddingField ? 'Adding...' : 'Add Category'}
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    
+                    {isAdmin && (
+                      <Dialog open={isFieldModalOpen} onOpenChange={setIsFieldModalOpen}>
+                        <DialogTrigger asChild>
+                          <button type="button" className="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline">
+                            + Add Category
+                          </button>
+                        </DialogTrigger>
+                        <DialogContent className="glass-card border border-border">
+                          <DialogHeader>
+                            <DialogTitle>Add New Category</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <Input
+                              placeholder="e.g. Technology, Sports..."
+                              value={newFieldName}
+                              onChange={(e) => setNewFieldName(e.target.value)}
+                              className="glass-card border-border"
+                            />
+                            <Button
+                              className="w-full"
+                              onClick={handleAddField}
+                              disabled={isAddingField}
+                              style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
+                            >
+                              {isAddingField ? 'Adding...' : 'Add Category'}
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
                   </div>
                   <Select value={selectedFieldId?.toString() ?? ''} onValueChange={v => setSelectedFieldId(Number(v))}>
                     <SelectTrigger className="glass-card border-border h-12">
@@ -836,16 +843,7 @@ export function CreatePredictionScreen() {
 
                 {/* Timing & Visibility */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold ml-1">Voting Ends <span className="text-muted-foreground/50 font-normal text-[10px] ml-1">(Optional)</span></Label>
-                    <Input
-                      type="datetime-local"
-                      value={votingEndDate}
-                      onChange={e => setVotingEndDate(e.target.value)}
-                      className="glass-card border-border h-12 text-foreground"
-                    />
-                    <p className="text-[10px] text-muted-foreground ml-1">Default: voting ends when prediction is over.</p>
-                  </div>
+                
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold ml-1">Prediction Over Date <span className="text-primary font-normal text-[10px] ml-1">(Mandatory)</span></Label>
                     <Input
@@ -857,6 +855,19 @@ export function CreatePredictionScreen() {
                       required
                     />
                   </div>
+
+
+  <div className="space-y-2">
+                    <Label className="text-sm font-semibold ml-1">Validation End <span className="text-muted-foreground/50 font-normal text-[10px] ml-1">(Optional)</span></Label>
+                    <Input
+                      type="datetime-local"
+                      value={votingEndDate}
+                      onChange={e => setVotingEndDate(e.target.value)}
+                      className="glass-card border-border h-12 text-foreground"
+                    />
+                    <p className="text-[10px] text-muted-foreground ml-1">By default, voting will end when the prediction period ends.</p>
+                  </div>
+
                 </div>
 
                 <div className="space-y-2 pt-2">
@@ -937,7 +948,18 @@ export function CreatePredictionScreen() {
               <div className="glass-card rounded-3xl border border-border/50 p-6 md:p-8 space-y-7 shadow-2xl">
                 {/* Same Category Picker for Polls */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-semibold ml-1">Category</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold ml-1">Category</Label>
+                    {isAdmin && (
+                      <button 
+                        type="button" 
+                        onClick={() => setIsFieldModalOpen(true)}
+                        className="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline"
+                      >
+                        + Add Category
+                      </button>
+                    )}
+                  </div>
                   <Select value={selectedFieldId?.toString() ?? ''} onValueChange={v => setSelectedFieldId(Number(v))}>
                     <SelectTrigger className="glass-card border-border h-12">
                       <SelectValue placeholder="Select category" />

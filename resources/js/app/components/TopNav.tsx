@@ -7,6 +7,7 @@ import { Input } from '@/app/components/ui/input';
 import { currentUser } from '@/app/data/mockData';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppSelector } from '@/app/store/hooks';
+import { getAuth } from '@/util/api';
 import { SearchSuggestions } from './SearchSuggestions';
 
 interface TopNavProps {
@@ -32,6 +33,24 @@ export function TopNav({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnreadCount = async () => {
+    if (isGuest) return;
+    try {
+      const res = await getAuth('/api/notifications');
+      setUnreadCount(res.unreadCount || 0);
+    } catch (e) {
+      console.error('Failed to fetch unread count', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+    // Refresh every minute
+    const interval = setInterval(fetchUnreadCount, 60000);
+    return () => clearInterval(interval);
+  }, [isGuest]);
 
   // Admin check - hide regular nav for admins
   const isAdmin = user?.role?.toLowerCase() === 'admin';
@@ -200,9 +219,18 @@ export function TopNav({
               )}
 
               <div className="hidden md:flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="glass rounded-full relative h-10 w-10">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="glass rounded-full relative h-10 w-10 transition-transform active:scale-95"
+                  onClick={() => navigate('/notifications')}
+                >
                   <Bell size={18} />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-pink-500 rounded-full"></span>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-pink-500 text-[10px] font-bold text-white rounded-full flex items-center justify-center animate-in zoom-in">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                 </Button>
 
                 {!isGuest && (

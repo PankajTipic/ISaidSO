@@ -17,6 +17,8 @@ class UserScore extends Model
         'total_predictions',
         'accuracy',
         'score',
+        'total_score',
+        'avg_votes',
         'city',
         'country',
     ];

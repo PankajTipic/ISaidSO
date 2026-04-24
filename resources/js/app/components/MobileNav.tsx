@@ -125,17 +125,35 @@
 
 
 
-import { Home, TrendingUp, Users, User, MoreHorizontal } from 'lucide-react';
+import { Home, TrendingUp, Users, User, MoreHorizontal, Bell } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppSelector } from '@/app/store/hooks';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getAuth } from '@/util/api';
 
 export function MobileNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const isGuest = useAppSelector((state) => state.auth.isGuest);
   const [showMore, setShowMore] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnreadCount = async () => {
+    if (isGuest) return;
+    try {
+      const res = await getAuth('/api/notifications');
+      setUnreadCount(res.unreadCount || 0);
+    } catch (e) {
+      console.error('Failed to fetch unread count', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 60000);
+    return () => clearInterval(interval);
+  }, [isGuest]);
 
   const navItems = [
     { icon: Home, label: 'Home', path: '/home' },
@@ -177,13 +195,18 @@ export function MobileNav() {
                   }}
                   className="flex flex-col items-center gap-1 py-2 rounded-xl"
                 >
-                  <Icon
-                    size={22}
-                    style={{
-                      color: isActive ? '#a855f7' : '#9ca3af',
-                      strokeWidth: isActive ? 2.5 : 2
-                    }}
-                  />
+                    <div className="relative">
+                      <Icon
+                        size={22}
+                        style={{
+                          color: isActive ? '#a855f7' : '#9ca3af',
+                          strokeWidth: isActive ? 2.5 : 2
+                        }}
+                      />
+                      {item.label === 'More' && unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-pink-500 rounded-full border-2 border-background"></span>
+                      )}
+                    </div>
                   <span
                     className="text-[11px] font-medium"
                     style={{ color: isActive ? '#a855f7' : '#9ca3af' }}
@@ -208,6 +231,24 @@ export function MobileNav() {
             onClick={(e)=> e.stopPropagation()}
           >
             <h3 className="font-semibold text-lg mb-4">More</h3>
+
+            <button
+              onClick={() => {
+                navigate('/notifications');
+                setShowMore(false);
+              }}
+              className="w-full flex items-center justify-between p-4 rounded-xl hover:bg-muted"
+            >
+              <div className="flex items-center gap-3">
+                <Bell size={20} />
+                <span>Notifications</span>
+              </div>
+              {unreadCount > 0 && (
+                <span className="bg-pink-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
 
             <button
               onClick={() => {

@@ -177,6 +177,7 @@ import { LeaderboardScreen } from '@/app/screens/LeaderboardScreen';
 import { GroupsScreen } from '@/app/screens/GroupsScreen';
 import { GroupDetailScreen } from '@/app/screens/GroupDetailScreen';
 import { AboutScreen } from '@/app/screens/AboutScreen';
+import { NotificationsScreen } from '@/app/screens/NotificationsScreen';
 
 // ────────────────────────────────────────────────
 // Admin screens & guards
@@ -316,6 +317,10 @@ export const router = createBrowserRouter([
           {
             path: 'about',
             Component: AboutScreen,
+          },
+          {
+            path: 'notifications',
+            Component: NotificationsScreen,
           },
         ],
       },

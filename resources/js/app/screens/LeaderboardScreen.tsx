@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
 import { MobileNav } from '@/app/components/MobileNav';
@@ -12,13 +12,32 @@ import { useAppSelector } from '@/app/store/hooks';
 
 export function LeaderboardScreen() {
   const [selectedTab, setSelectedTab] = useState('global');
+  const [selectedCategory, setSelectedCategory] = useState<string | number>('All');
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
   const [userStanding, setUserStanding] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dbCategories, setDbCategories] = useState<any[]>([]);
 
   const currentUser = useAppSelector((state) => state.auth.user);
   const currentUserId = currentUser?.id;
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await getAuth('/api/fields');
+        const data = res.data ?? res;
+        if (Array.isArray(data)) {
+          setDbCategories(data);
+        } else if (data && Array.isArray(data.data)) {
+          setDbCategories(data.data);
+        }
+      } catch (err) {
+        console.error('Failed to load fields', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -26,8 +45,10 @@ export function LeaderboardScreen() {
         setLoading(true);
         setError(null);
 
+        const catQuery = selectedCategory !== 'All' ? `&category_id=${selectedCategory}` : '';
+
         // Fetch Leaderboard
-        const response = await getAuth(`/api/leaderboard?location_scope=${selectedTab}`);
+        const response = await getAuth(`/api/leaderboard?location_scope=${selectedTab}${catQuery}`);
         const data = response.data ?? response;
         const list = Array.isArray(data) ? data : data.data ?? [];
 
@@ -40,7 +61,7 @@ export function LeaderboardScreen() {
         setLeaderboardData(sanitized);
 
         // Fetch User Standing
-        const standingRes = await getAuth(`/api/leaderboard/my-standing?location_scope=${selectedTab}`);
+        const standingRes = await getAuth(`/api/leaderboard/my-standing?location_scope=${selectedTab}${catQuery}`);
         if (standingRes.data) {
           setUserStanding(standingRes.data);
         }
@@ -54,7 +75,7 @@ export function LeaderboardScreen() {
     };
 
     fetchLeaderboard();
-  }, [selectedTab]);
+  }, [selectedTab, selectedCategory]);
 
   const getRankMedal = (rank: number) => {
     if (rank === 1) return '🥇';
@@ -70,7 +91,6 @@ export function LeaderboardScreen() {
     return '#6b7280';
   };
 
-  const topThree = leaderboardData.slice(0, 3);
   const fullList = leaderboardData;
 
   return (
@@ -84,41 +104,25 @@ export function LeaderboardScreen() {
             <Trophy size={32} className="text-[#fbbf24]" />
             Leaderboard
           </h1>
-          {/* <div className="mt-4 p-4 glass-card rounded-2xl border border-primary/20 bg-primary/5">
-            <p className="text-sm font-semibold mb-1">Scoring Transparency</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Rankings are based on <span className="text-foreground font-bold italic">Accuracy %</span>. 
-              Formula: <code className="bg-muted px-1.5 py-0.5 rounded text-primary">(Correct / Total) × 100</code>
-            </p>
-          </div> */}
         </div>
-
-        {/* Tabs */}
-        {/* <Tabs value={selectedTab} onValueChange={setSelectedTab} className="mb-6">
-          <TabsList className="glass-card w-full justify-center md:justify-start flex-wrap gap-2">
-            <TabsTrigger value="global" className="flex-1 md:flex-none">Global</TabsTrigger>
-            <TabsTrigger value="country" className="flex-1 md:flex-none">Country</TabsTrigger>
-            <TabsTrigger value="city" className="flex-1 md:flex-none">City</TabsTrigger>
-          </TabsList>
-        </Tabs> */}
 
         <div className="flex justify-center mb-6">
           <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full max-w-md">
             <TabsList className="glass-card w-full max-w-md justify-center rounded-2xl p-1.5">
-              <TabsTrigger 
-                value="global" 
+              <TabsTrigger
+                value="global"
                 className="flex-1 h-10 md:h-11 rounded-xl text-xs md:text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:bg-muted transition-all"
               >
                 Global
               </TabsTrigger>
-              <TabsTrigger 
-                value="country" 
+              <TabsTrigger
+                value="country"
                 className="flex-1 h-10 md:h-11 rounded-xl text-xs md:text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:bg-muted transition-all"
               >
                 Country
               </TabsTrigger>
-              <TabsTrigger 
-                value="city" 
+              <TabsTrigger
+                value="city"
                 className="flex-1 h-10 md:h-11 rounded-xl text-xs md:text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:bg-muted transition-all"
               >
                 City
@@ -127,43 +131,108 @@ export function LeaderboardScreen() {
           </Tabs>
         </div>
 
+        {/* Category Filter */}
+        {dbCategories.length > 0 && (
+          <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-2 mb-6 justify-start md:justify-center">
+            <button
+              onClick={() => setSelectedCategory('All')}
+              className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
+                selectedCategory === 'All'
+                  ? 'bg-[#a855f7] text-white shadow-lg shadow-[#a855f7]/30'
+                  : 'glass-card text-muted-foreground hover:bg-muted/50'
+              }`}
+            >
+              All Categories
+            </button>
+            {dbCategories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
+                  selectedCategory === cat.id 
+                    ? 'bg-[#a855f7] text-white shadow-lg shadow-[#a855f7]/30' 
+                    : 'glass-card text-muted-foreground hover:bg-muted/50'
+                }`}
+              >
+                {cat.fields}
+              </button>
+            ))}
+          </div>
+        )}
+
 
         {/* User Info */}
-{/* Current User Strip */}
-{userStanding && (
-  <motion.div 
-    initial={{ y: 20, opacity: 0 }}
-    animate={{ y: 0, opacity: 1 }}
-    className="mb-4 rounded-2xl border border-white/20 p-4 shadow-xl flex items-center justify-between bg-gradient-to-r from-[#a855f7] to-[#7c3aed] text-white"
-  >
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#a855f7] font-bold text-lg">
-        #{userStanding.rank}
-      </div>
-      <div>
-        <p className="text-[10px] uppercase font-black text-white/70 leading-none mb-1 tracking-wider">
-          Your Standing
-        </p>
-        <p className="font-bold text-white">
-          Ranked #{userStanding.rank} Globally
-        </p>
-      </div>
-    </div>
+        {/* User Info / Your Standing Area */}
+        {userStanding && (
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="mb-6"
+          >
+            {userStanding.total_predictions > 0 ? (
+              /* Case 1: User has made predictions (Ranked or In Progress) */
+              <div className="rounded-[2rem] border border-white/20 p-5 md:p-6 shadow-2xl flex items-center justify-between bg-gradient-to-br from-[#a855f7] via-[#8b5cf6] to-[#7c3aed] text-white relative overflow-hidden group">
+                {/* Decorative Background Elements */}
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-700" />
+                <div className="absolute -left-4 -bottom-4 w-32 h-32 bg-black/10 rounded-full blur-2xl" />
 
-    <div className="text-right">
-      <p className="text-2xl font-black text-white leading-none">
-        {Number(userStanding.accuracy)?.toFixed(1)}%
-      </p>
-      <p className="text-[10px] text-white/70 font-bold mt-1 uppercase tracking-tight">
-        Accuracy
-      </p>
-    </div>
-  </motion.div>
-)}
+                <div className="flex items-center gap-4 md:gap-6 relative z-10">
+                  <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-white shadow-inner flex items-center justify-center text-[#8b5cf6] font-black text-xl md:text-2xl transform revolve-3d group-hover:scale-105 transition-transform">
+                    {userStanding.rank ? `#${userStanding.rank}` : '?'}
+                  </div>
+                  <div>
+                    <p className="text-[10px] md:text-xs uppercase font-black text-white/80 leading-none mb-1.5 tracking-[0.2em]">
+                      {userStanding.rank ? 'Your Global Standing' : 'Ranking in Progress'}
+                    </p>
+                    <h2 className="font-black text-xl md:text-2xl text-white tracking-tight">
+                      {userStanding.rank
+                        ? `Ranked #${userStanding.rank} Globally`
+                        : `${10 - userStanding.total_predictions} more for ranking`}
+                    </h2>
+                  </div>
+                </div>
 
+                <div className="text-right relative z-10">
+                  <p className="text-3xl md:text-4xl font-black text-white leading-none tracking-tighter">
+                    {userStanding.score}
+                  </p>
+                  <p className="text-[10px] md:text-xs text-white/80 font-black mt-2 uppercase tracking-widest">
+                    Weighted Pts
+                  </p>
+                </div>
+              </div>
+            ) : (
+              /* Case 2: User has 0 predictions - "Start your journey" CTA */
+              <div className="rounded-[2rem] border border-white/20 p-5 md:p-6 shadow-2xl flex flex-col md:flex-row items-center justify-between bg-gradient-to-br from-[#a855f7] via-[#8b5cf6] to-[#7c3aed] text-white relative overflow-hidden group gap-4 md:gap-0">
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-700" />
+                <div className="absolute -left-4 -bottom-4 w-32 h-32 bg-black/10 rounded-full blur-2xl" />
 
-
-
+                <div className="flex items-center gap-4 md:gap-6 relative z-10 w-full md:w-auto">
+                  <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-white shadow-inner flex items-center justify-center text-[#8b5cf6] group-hover:scale-105 transition-transform flex-shrink-0">
+                    <TrendingUp size={32} strokeWidth={3} />
+                  </div>
+                  <div className="text-left flex-1">
+                    <h2 className="font-black text-lg md:text-xl text-white leading-tight mb-1">
+                      Start your prediction journey if you want to vote
+                    </h2>
+                    <p className="text-[10px] md:text-xs text-white/80 font-bold uppercase tracking-wider">
+                      Make your first prediction to be ranked
+                    </p>
+                  </div>
+                </div>
+                
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => window.location.href = '/'}
+                  className="relative z-10 w-full md:w-auto px-6 py-3 bg-white text-[#8b5cf6] rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all whitespace-nowrap"
+                >
+                  Start Predicting
+                </motion.button>
+              </div>
+            )}
+          </motion.div>
+        )}
 
 
         {loading ? (
@@ -181,8 +250,9 @@ export function LeaderboardScreen() {
             </button>
           </div>
         ) : leaderboardData.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <p className="text-lg">No rankings yet — be the first to earn points!</p>
+          <div className="text-center py-16 text-muted-foreground px-6">
+            <p className="text-lg mb-2 italic">No rankings yet</p>
+            <p className="text-sm opacity-70">Need 10+ predictions and 5+ avg votes to qualify for the global leaderboard.</p>
           </div>
         ) : (
           <>
@@ -195,7 +265,7 @@ export function LeaderboardScreen() {
               transition={{ delay: 0.2 }}
             >
               {fullList.map((entry, index) => {
-                const rank = index + 1;
+                const rank = selectedCategory === 'All' ? (entry.rank || index + 1) : index + 1;
                 const medal = getRankMedal(rank);
                 const rankColor = getRankColor(rank);
                 const isCurrentUser = entry.user_id === currentUserId;
@@ -203,9 +273,8 @@ export function LeaderboardScreen() {
                 return (
                   <motion.div
                     key={entry.user_id}
-                    className={`glass-card rounded-xl md:rounded-2xl p-4 flex items-center gap-3 md:gap-4 transition-all ${
-                      isCurrentUser ? 'ring-2 ring-[#a855f7] bg-gradient-to-r from-[#a855f711] to-transparent' : ''
-                    }`}
+                    className={`glass-card rounded-xl md:rounded-2xl p-4 flex items-center gap-3 md:gap-4 transition-all ${isCurrentUser ? 'ring-2 ring-[#a855f7] bg-gradient-to-r from-[#a855f711] to-transparent' : ''
+                      }`}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.03 }}
@@ -222,35 +291,40 @@ export function LeaderboardScreen() {
                     </div>
 
                     {/* Avatar */}
-                    <Avatar className="w-10 h-10 md:w-12 md:h-12">
+                    <Avatar className="w-10 h-10 md:w-12 md:h-12 border border-white/10">
                       <AvatarImage src={entry.user?.avatar_url} alt={entry.user?.name} />
-                      <AvatarFallback>{entry.user?.name?.[0] || '?'}</AvatarFallback>
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                        {entry.user?.name?.[0] || '?'}
+                      </AvatarFallback>
                     </Avatar>
 
                     {/* User Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm md:text-base truncate">
-                          {entry.user?.name || 'Anonymous'}
+                        <p className="font-bold text-sm md:text-base truncate">
+                          {entry.user?.name || 'Anonymous User'}
                         </p>
                         {isCurrentUser && (
-                          <span className="text-[10px] md:text-xs px-2 py-0.5 rounded-full bg-[#a855f7]/20 text-[#a855f7]">
+                          <span className="text-[10px] md:text-xs px-2 py-0.5 rounded-full bg-[#a855f7]/20 text-[#a855f7] font-black uppercase">
                             You
                           </span>
                         )}
                       </div>
-                    </div> 
+                      <p className="text-[10px] text-muted-foreground font-medium truncate">
+                        {entry.accuracy?.toFixed(1)}% Accuracy • {entry.total_predictions} Preds
+                      </p>
+                    </div>
 
-                    {/* Accuracy Display */}
-                    <div className="flex flex-col items-end text-right">
+                    {/* Score Display */}
+                    <div className="flex flex-col items-end text-right min-w-[60px]">
                       <div className="flex items-center gap-1.5">
-                        <TrendingUp size={14} className="text-primary" />
-                        <span className="font-black text-lg md:text-xl text-primary">
-                          {entry.accuracy?.toFixed(1) || 0}%
+                        <TrendingUp size={14} className="text-[#a855f7]" />
+                        <span className="font-black text-xl md:text-2xl text-foreground">
+                          {entry.score}
                         </span>
                       </div>
-                      <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
-                        {entry.total_predictions || 0} Predictions
+                      <div className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">
+                        Pts
                       </div>
                     </div>
                   </motion.div>
@@ -286,11 +360,11 @@ export function LeaderboardScreen() {
           </motion.div>
         </div>
       )} */}
-      
+
       {/* Desktop Fixed Standing (Optional but nice) */}
       {userStanding && (
         <div className="hidden md:block fixed bottom-6 left-1/2 -translate-x-1/2 z-30 px-4 w-full max-w-2xl">
-          <motion.div 
+          <motion.div
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             className="rounded-2xl border border-white/20 p-4 shadow-2xl flex items-center justify-between bg-gradient-to-r from-[#a855f7] to-[#7c3aed] text-white"

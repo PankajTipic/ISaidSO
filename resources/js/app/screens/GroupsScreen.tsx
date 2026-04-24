@@ -136,20 +136,21 @@ const fetchGroups = async () => {
     }
   };
 
-  const handleJoinGroup = async (groupId: number, groupName: string) => {
+  const handleJoinGroup = async (groupId: number, groupName: string, isPrivate: boolean) => {
     if (isGuest) {
       toast.info('Please log in to join groups', {
         action: { label: 'Log In', onClick: () => navigate('/auth') }
       });
       return;
     }
+    
     try {
-      await postAuth(`/api/groups/${groupId}/join`);
-      toast.success(`Joined ${groupName}!`);
+      const res = await postAuth(`/api/groups/${groupId}/join`);
+      toast.success(res.message || `Joined ${groupName}!`);
       fetchGroups();
     } catch (error: any) {
       console.error(error);
-      const msg = error.data && error.data.message ? error.data.message : 'Failed to join group';
+      const msg = error.response?.data?.message || 'Failed to join group';
       toast.error(msg);
     }
   };
@@ -276,45 +277,50 @@ const fetchGroups = async () => {
                   filteredGroups.map((group, index) => (
                     <motion.div
                       key={group.id}
-                      className="glass-card rounded-xl p-5 border border-border/50 hover:border-primary/20 transition-colors"
+                      className="glass-card rounded-2xl p-4 md:p-5 border border-border/50 hover:border-primary/20 transition-all shadow-sm"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
                     >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-1">
-                            <h3 className="font-bold text-lg">{group.name}</h3>
-                            {group.isPrivate ? (
-                              <Lock size={14} className="text-muted-foreground" />
-                            ) : (
-                              <Globe size={14} className="text-muted-foreground" />
-                            )}
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+                        <div className="flex-1 text-center md:text-left min-w-0">
+                          <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
+                            <h3 className="font-bold text-xl md:text-lg truncate">{group.name}</h3>
+                            <div className="shrink-0 p-1.5 rounded-full bg-muted/50">
+                              {group.isPrivate ? (
+                                <Lock size={14} className="text-muted-foreground" />
+                              ) : (
+                                <Globe size={14} className="text-muted-foreground" />
+                              )}
+                            </div>
                           </div>
-                          <p className="text-muted-foreground mb-3 text-sm line-clamp-1">{group.description}</p>
-                          <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
-                            <div className="flex items-center gap-1.5">
-                              <Users size={14} />
+                          <p className="text-muted-foreground mb-4 text-xs md:text-sm line-clamp-2 md:line-clamp-1 h-9 md:h-auto">
+                            {group.description}
+                          </p>
+                          
+                          <div className="flex items-center justify-center md:justify-start gap-3 text-[10px] md:text-xs font-bold text-muted-foreground/80 bg-muted/30 md:bg-transparent py-2 md:py-0 rounded-xl md:rounded-none px-3 md:px-0">
+                            <div className="flex items-center gap-1.5 whitespace-nowrap">
+                              <Users size={12} className="md:w-3.5 md:h-3.5" />
                               <span>{group.memberCount} members</span>
                             </div>
-                            <span>•</span>
-                            <span>Created {new Date(group.createdAt).toLocaleDateString()}</span>
+                            <span className="text-muted-foreground/30">•</span>
+                            <span className="whitespace-nowrap">Created {new Date(group.createdAt).toLocaleDateString()}</span>
                           </div>
                         </div>
+                        
                         {!group.isMember && !isGuest && (
-                          <Button
-                            onClick={() => handleJoinGroup(group.id, group.name)}
-                            disabled={group.isPrivate}
-                            size="sm"
-                            className="px-6"
-                            style={{
-                              background: group.isPrivate
-                                ? undefined
-                                : 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-                            }}
-                          >
-                            {group.isPrivate ? 'Private' : 'Join'}
-                          </Button>
+                          <div className="flex justify-center md:justify-end shrink-0 pt-2 md:pt-0 border-t md:border-none border-border/10">
+                            <Button
+                              onClick={() => handleJoinGroup(group.id, group.name, group.isPrivate)}
+                              size="lg"
+                              className="w-full md:w-auto px-10 rounded-full font-bold shadow-lg shadow-primary/10 transition-all active:scale-95 hover:brightness-110"
+                              style={{
+                                background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
+                              }}
+                            >
+                              {group.isPrivate ? 'Request to Join' : 'Join'}
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </motion.div>
@@ -355,39 +361,47 @@ const fetchGroups = async () => {
                   {filteredGroups.map((group, index) => (
                     <motion.div
                       key={group.id}
-                      className="glass-card rounded-xl p-5 border border-border/50 hover:border-primary/20 transition-colors"
+                      className="glass-card rounded-2xl p-4 md:p-5 border border-border/50 hover:border-primary/20 transition-all shadow-sm"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
                     >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-1">
-                            <h3 className="font-bold text-lg">{group.name}</h3>
-                            {group.isPrivate ? (
-                              <Lock size={14} className="text-muted-foreground" />
-                            ) : (
-                              <Globe size={14} className="text-muted-foreground" />
-                            )}
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+                        <div className="flex-1 text-center md:text-left min-w-0">
+                          <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
+                            <h3 className="font-bold text-xl md:text-lg truncate">{group.name}</h3>
+                            <div className="shrink-0 p-1.5 rounded-full bg-muted/50">
+                              {group.isPrivate ? (
+                                <Lock size={14} className="text-muted-foreground" />
+                              ) : (
+                                <Globe size={14} className="text-muted-foreground" />
+                              )}
+                            </div>
                           </div>
-                          <p className="text-muted-foreground mb-3 text-sm line-clamp-1">{group.description}</p>
-                          <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
-                            <div className="flex items-center gap-1.5">
-                              <Users size={14} />
+                          <p className="text-muted-foreground mb-4 text-xs md:text-sm line-clamp-2 md:line-clamp-1 h-9 md:h-auto">
+                            {group.description}
+                          </p>
+                          
+                          <div className="flex items-center justify-center md:justify-start gap-3 text-[10px] md:text-xs font-bold text-muted-foreground/80 bg-muted/30 md:bg-transparent py-2 md:py-0 rounded-xl md:rounded-none px-3 md:px-0">
+                            <div className="flex items-center gap-1.5 whitespace-nowrap">
+                              <Users size={12} className="md:w-3.5 md:h-3.5" />
                               <span>{group.memberCount} members</span>
                             </div>
-                            <span>•</span>
-                            <span>Created {new Date(group.createdAt).toLocaleDateString()}</span>
+                            <span className="text-muted-foreground/30">•</span>
+                            <span className="whitespace-nowrap">Created {new Date(group.createdAt).toLocaleDateString()}</span>
                           </div>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="px-6 glass-card"
-                          onClick={() => handleViewGroup(group.id)}
-                        >
-                          View
-                        </Button>
+                        
+                        <div className="flex justify-center md:justify-end shrink-0 pt-2 md:pt-0 border-t md:border-none border-border/10">
+                          <Button
+                            size="lg"
+                            variant="outline"
+                            className="w-full md:w-auto px-10 rounded-full font-bold glass-card shadow-sm hover:bg-muted/50 transition-all active:scale-95"
+                            onClick={() => handleViewGroup(group.id)}
+                          >
+                            View
+                          </Button>
+                        </div>
                       </div>
                     </motion.div>
                   ))}
