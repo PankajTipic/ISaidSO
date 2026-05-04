@@ -238,7 +238,7 @@ export default function LoginScreen() {
             I Said So
           </h1>
           <p className="text-base lg:text-xl font-semibold text-gray-700 leading-snug max-w-[300px] mx-auto lg:mx-0">
-            What I Said… They shall be.
+            What I Said… Thy shall be.
           </p>
 
           {/* Pill tags — desktop only */}

@@ -1,861 +1,3 @@
-// import { useState, useEffect } from 'react';
-// import { useNavigate, useParams } from 'react-router-dom';
-// import { motion } from 'framer-motion';
-// import { Button } from '@/app/components/ui/button';
-// import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
-// import { TopNav } from '@/app/components/TopNav';
-// import { MobileNav } from '@/app/components/MobileNav';
-// import {
-//   ArrowLeft,
-//   Clock,
-//   ThumbsUp,
-//   ThumbsDown,
-//   Target,
-//   CheckCircle2,
-//   Users,
-//   Globe,
-//   Lock,
-//   Share2,
-// } from 'lucide-react';
-// import { format } from 'date-fns';
-// import { toast } from 'sonner';
-// import { useAppSelector } from '@/app/store/hooks';
-// import { getAuth, postAuth } from '@/util/api';
-
-// const categoryColors: Record<string, string> = {
-//   trending: '#a855f7',
-//   politics: '#ef4444',
-//   sports: '#10b981',
-//   finance: '#fbbf24',
-//   education: '#06b6d4',
-//   entertainment: '#ec4899',
-// };
-
-// function computeOutcome(agreeP: number, disagreeP: number, vagueP: number): 'yes' | 'no' | 'vague' {
-//   // Vague wins if it is the dominant option
-//   if (vagueP > agreeP && vagueP > disagreeP) return 'vague';
-//   const margin = Math.abs(agreeP - disagreeP);
-//   if (margin < 10) return 'vague'; // too close
-//   return agreeP > disagreeP ? 'yes' : 'no';
-// }
-
-// function getResultLabel(
-//   totalVotes: number,
-//   agreeP: number,
-//   disagreeP: number,
-//   vagueP: number,
-// ): string {
-//   if (totalVotes === 0) return 'No votes yet';
-
-//   const leading = Math.max(agreeP, disagreeP, vagueP);
-//   const margin = Math.abs(agreeP - disagreeP);
-
-//   // --- Vague / Unclear dominant ---
-//   if (vagueP > agreeP && vagueP > disagreeP) {
-//     if (vagueP >= 85) return `Overwhelmingly unclear (${vagueP}%)`;
-//     if (vagueP >= 60) return `Clearly unclear (${vagueP}% unclear)`;
-//     if (vagueP >= 45) return `Leaning unclear (${vagueP}% unclear)`;
-//   }
-
-//   // --- Too close between YES and NO ---
-//   if (margin <= 5 && vagueP < 40) {
-//     return `Too close to call (${agreeP}% vs ${disagreeP}%)`;
-//   }
-
-//   // --- Highly split (both YES and NO roughly equal, vague not dominant) ---
-//   if (margin <= 3) return 'Highly uncertain (votes are split)';
-
-//   // --- YES leaning ---
-//   if (agreeP > disagreeP && agreeP > vagueP) {
-//     if (agreeP >= 85) return `Overwhelming YES (${agreeP}%)`;
-//     if (agreeP >= 60) return `Clear YES (${agreeP}% vs ${disagreeP}%)`;
-//     return `Leaning YES (${agreeP}% vs ${disagreeP}%)`;
-//   }
-
-//   // --- NO leaning ---
-//   if (disagreeP > agreeP && disagreeP > vagueP) {
-//     if (disagreeP >= 85) return `Overwhelming NO (${disagreeP}%)`;
-//     if (disagreeP >= 60) return `Clear NO (${disagreeP}% vs ${agreeP}%)`;
-//     return `Leaning NO (${disagreeP}% vs ${agreeP}%)`;
-//   }
-
-//   return `Too close to call (${agreeP}% vs ${disagreeP}%)`;
-// }
-
-// function getOutcomeFromLabel(label: string): 'yes' | 'no' | 'vague' {
-//   const l = label.toLowerCase();
-//   if (l.includes('yes')) return 'yes';
-//   if (l.includes('no')) return 'no';
-//   return 'vague';
-// }
-
-// export function PredictionDetailScreen() {
-//   const navigate = useNavigate();
-//   const { id } = useParams<{ id: string }>();
-//   const [prediction, setPrediction] = useState<any>(null);
-//   const [selectedAnswer, setSelectedAnswer] = useState<string>('');
-//   const [loading, setLoading] = useState(true);
-//   const [submitting, setSubmitting] = useState(false);
-//   const [fetchError, setFetchError] = useState<string | null>(null);
-
-//   const { user: currentUser } = useAppSelector((state) => state.auth);
-
-//   const formatDateCompact = (dateStr?: string | null) => {
-//     if (!dateStr) return 'TBD';
-//     const date = new Date(dateStr);
-//     if (isNaN(date.getTime())) return 'TBD';
-//     return format(date, 'dd MMM');
-//   };
-
-//   useEffect(() => {
-//     if (!id) {
-//       setFetchError('No prediction ID provided');
-//       setLoading(false);
-//       return;
-//     }
-//     const fetchPrediction = async () => {
-//       try {
-//         setLoading(true);
-//         setFetchError(null);
-//         const data = await getAuth(`/api/predictions/${id}`);
-//         setPrediction(data);
-//       } catch (err: any) {
-//         setFetchError(err.message || 'Failed to load prediction');
-//         toast.error('Could not load prediction');
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-//     fetchPrediction();
-//   }, [id]);
-
-//   const handleVote = async () => {
-//     if (!selectedAnswer) {
-//       toast.error('Please select an answer');
-//       return;
-//     }
-//     setSubmitting(true);
-//     try {
-//       await postAuth('/api/answers', {
-//         question_id: id,
-//         user_id: currentUser?.id,
-//         answer: selectedAnswer.trim(),
-//       });
-//       toast.success('Vote submitted successfully!');
-//       setSelectedAnswer('');
-//       const refreshed = await getAuth(`/api/predictions/${id}`);
-//       if (refreshed) setPrediction(refreshed);
-//     } catch (err: any) {
-//       toast.error(err.message || 'Failed to submit vote');
-//     } finally {
-//       setSubmitting(false);
-//     }
-//   };
-
-//   if (loading) {
-//     return (
-//       <div className="min-h-screen bg-background flex items-center justify-center">
-//         <p className="text-muted-foreground animate-pulse">Loading prediction...</p>
-//       </div>
-//     );
-//   }
-
-//   if (fetchError || !prediction) {
-//     return (
-//       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-6">
-//         <h2 className="text-xl font-bold text-red-400">Error</h2>
-//         <p className="text-muted-foreground text-center">{fetchError || 'Prediction not found'}</p>
-//         <Button onClick={() => navigate(-1)} variant="outline">Go Back</Button>
-//       </div>
-//     );
-//   }
-
-//   // Stats
-//   const answers = Array.isArray(prediction?.answers) ? prediction.answers : [];
-//   const yesCount = answers.filter((a: any) => a.answer?.toLowerCase() === 'yes').length;
-//   const noCount = answers.filter((a: any) => a.answer?.toLowerCase() === 'no').length;
-//   const vagueCount = answers.filter((a: any) => a.answer?.toLowerCase() === 'vague').length;
-//   const totalValidVotes = yesCount + noCount + vagueCount;
-
-//   const agreePercentage = totalValidVotes > 0 ? Math.round((yesCount / totalValidVotes) * 100) : 0;
-//   const disagreePercentage = totalValidVotes > 0 ? Math.round((noCount / totalValidVotes) * 100) : 0;
-//   const vaguePercentage = totalValidVotes > 0 ? Math.round((vagueCount / totalValidVotes) * 100) : 0;
-
-//   const isClosed = prediction?.end_date ? new Date(prediction.end_date) < new Date() : false;
-//   const hasVoted = answers.some((a: any) => a.user_id === currentUser?.id);
-//   const userVote = answers.find((a: any) => a.user_id === currentUser?.id)?.answer?.toUpperCase();
-
-//   const catColor = categoryColors[prediction?.field?.fields?.toLowerCase() || 'trending'] || '#a855f7';
-
-//   const resultLabel = getResultLabel(totalValidVotes, agreePercentage, disagreePercentage, vaguePercentage);
-//   const outcome = getOutcomeFromLabel(resultLabel);
-
-//   const outcomeStyle = {
-//     yes: { chip: 'bg-green-500/10 border-green-500/30 text-green-400', icon: <CheckCircle2 size={14} /> },
-//     no: { chip: 'bg-red-500/10 border-red-500/30 text-red-400', icon: <CheckCircle2 size={14} /> },
-//     vague: { chip: 'bg-amber-500/10 border-amber-500/30 text-amber-400', icon: <Users size={14} /> },
-//   }[outcome];
-
-//   return (
-//     <div className="h-screen bg-background flex flex-col overflow-hidden">
-//       <TopNav />
-
-//       <div className="flex-1 overflow-y-auto px-4 pt-3 pb-6">
-//         <motion.div
-//           initial={{ opacity: 0, y: 12 }}
-//           animate={{ opacity: 1, y: 0 }}
-//           className="max-w-lg mx-auto flex flex-col gap-3"
-//         >
-//           {/* Top Header Row with Category + Status + Public/Private */}
-//           <div className="flex items-center justify-between flex-wrap gap-2">
-//             <button onClick={() => navigate(-1)} className="p-1 -ml-1">
-//               <ArrowLeft size={22} />
-//             </button>
-
-//             <div className="flex items-center gap-2">
-//               {/* Category Badge */}
-//               <span
-//                 className="px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-widest"
-//                 style={{ backgroundColor: `${catColor}22`, color: catColor }}
-//               >
-//                 {prediction?.field?.fields || 'SPORTS'}
-//               </span>
-
-//               {/* Status Badge - Now on top row, next to Public/Private */}
-//               <span className={`px-3 py-0.5 rounded-full text-xs font-bold uppercase ${
-//                 isClosed ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'
-//               }`}>
-//                 {isClosed ? 'CLOSED' : 'OPEN'}
-//               </span>
-
-//               {/* Public / Private Badge */}
-//               <div className={`flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-bold border ${
-//                 prediction?.visibility === 'private'
-//                   ? 'bg-amber-500/10 border-amber-500/30 text-amber-600'
-//                   : 'bg-blue-500/10 border-blue-500/30 text-blue-600'
-//               }`}>
-//                 {prediction?.visibility === 'private' ? <Lock size={13} /> : <Globe size={13} />}
-//                 {prediction?.visibility === 'private' ? 'PRIVATE' : 'PUBLIC'}
-//               </div>
-//             </div>
-
-//             {/* <Share2 size={20} className="text-muted-foreground" /> */}
-//           </div>
-
-//           {/* Question Card */}
-//           <div className="glass-card rounded-2xl p-4">
-//             <h1 className="text-lg font-semibold leading-tight">
-//               {prediction.questions || 'Ronaldo can win the FIFA ?'}
-//             </h1>
-//             <div className="flex items-center gap-2 mt-3">
-//               <Avatar className="w-5 h-5">
-//                 <AvatarImage src={prediction.user?.avatar_url} />
-//                 <AvatarFallback className="text-xs">@P</AvatarFallback>
-//               </Avatar>
-//               <span className="text-sm text-muted-foreground">
-//                 @{prediction.user?.username || 'Pankaj7777'}
-//               </span>
-//             </div>
-//           </div>
-
-//           {/* Timeline Card */}
-//           {/* <div className="glass-card rounded-2xl p-4 flex items-center justify-between">
-//             <div className="flex items-center gap-3">
-//               <Clock size={18} className="text-muted-foreground" />
-//               <div>
-//                 <p className="text-xs text-muted-foreground font-medium">TIMELINE</p>
-//                 <p className="text-sm font-medium">
-//                   DUE: {formatDateCompact(prediction.end_date)} • VOTING: {formatDateCompact(prediction.end_date)}
-//                 </p>
-//               </div>
-//             </div>
-//           </div> */}
-
-//           {/* Timeline Card - Clean & Proper */}
-// <div className="glass-card rounded-2xl p-4">
-//   <div className="flex items-center gap-3">
-//     <Clock size={18} className="text-muted-foreground flex-shrink-0" />
-//     <div className="flex-1">
-//       <p className="text-xs text-muted-foreground font-medium mb-1">TIMELINE</p>
-      
-//       <div className="space-y-1 text-sm">
-//         <div className="flex justify-between">
-//           <span className="text-muted-foreground">Prediction Due Date :</span>
-//           <span className="font-medium">{formatDateCompact(prediction.start_date)}</span>
-//         </div>
-//         <div className="flex justify-between">
-//           <span className="text-muted-foreground">Voting Ends Date :</span>
-//           <span className="font-medium">{formatDateCompact(prediction.end_date)}</span>
-//         </div>
-//       </div>
-//     </div>
-//   </div>
-// </div>
-
-//           {/* Main Voting / Result Card */}
-//           <div className="glass-card rounded-2xl p-5">
-//             <div className="flex items-center gap-2 mb-4">
-//               <Target size={18} className="text-blue-400" />
-//               <h3 className="font-semibold">{isClosed ? 'Result' : 'Your Prediction'}</h3>
-//             </div>
-
-//             {isClosed ? (
-//               <div className="space-y-5">
-//                 {/* Verified Outcome */}
-//                 {/* <div className="flex items-center gap-3">
-//                   <div className="px-5 py-2 rounded-xl bg-green-500/10 text-green-400 font-bold text-xl border border-green-500/30">
-//                     Yes 
-//                   </div>
-//                   <p className="text-xs uppercase font-bold tracking-widest text-muted-foreground">
-//                     OUTCOME VERIFIED
-//                   </p>
-//                 </div> */}
-
-//                 {isClosed && prediction.correct_answer && (
-//   <div className="flex items-center gap-3">
-//     <div className={`px-5 py-2 rounded-xl font-bold text-xl border ${
-//       prediction.correct_answer === 'Yes' 
-//         ? 'bg-green-500/10 text-green-400 border-green-500/30'
-//         : prediction.correct_answer === 'No'
-//         ? 'bg-red-500/10 text-red-400 border-red-500/30'
-//         : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-//     }`}>
-//       {prediction.correct_answer}
-//     </div>
-//     <p className="text-xs uppercase font-bold tracking-widest text-muted-foreground">
-//       OFFICIAL OUTCOME
-//     </p>
-//   </div>
-// )}
-
-//                 {/* Community Vote Bar */}
-//                 {totalValidVotes > 0 && (
-//                   <div className="space-y-3">
-//                     <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-sm font-medium ${outcomeStyle.chip}`}>
-//                       {outcomeStyle.icon}
-//                       <span>{resultLabel}</span>
-//                     </div>
-
-//                     <div className="h-2.5 bg-muted rounded-full overflow-hidden flex">
-//                       <div className="h-full bg-green-500" style={{ width: `${agreePercentage}%` }} />
-//                       <div className="h-full bg-red-500" style={{ width: `${disagreePercentage}%` }} />
-//                       <div className="h-full bg-amber-500" style={{ width: `${vaguePercentage}%` }} />
-//                     </div>
-
-//                     <div className="flex justify-between text-xs text-muted-foreground">
-//                       <span>Yes {agreePercentage}%</span>
-//                       <span>No {disagreePercentage}%</span>
-//                       <span>Vague {vaguePercentage}%</span>
-//                     </div>
-
-//                     <p className="text-center text-xs text-muted-foreground">
-//                       Based on {totalValidVotes} votes
-//                     </p>
-//                   </div>
-//                 )}
-//               </div>
-//             ) : (
-//               <div className="space-y-5">
-//                 {/* Live community sentiment */}
-//                 {totalValidVotes > 0 && (
-//                   <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-sm font-medium ${outcomeStyle.chip}`}>
-//                     {outcomeStyle.icon}
-//                     <span>{resultLabel}</span>
-//                   </div>
-//                 )}
-
-//                 <p className="text-sm text-muted-foreground text-center">
-//                   Do you think this will happen?
-//                 </p>
-
-//                 <div className="grid grid-cols-3 gap-3">
-//                   {['Yes', 'No', 'Vague'].map((option) => (
-//                     <button
-//                       key={option}
-//                       onClick={() => setSelectedAnswer(option)}
-//                       disabled={hasVoted}
-//                       className={`p-4 rounded-2xl border-2 flex flex-col items-center justify-center h-24 transition-all ${
-//                         selectedAnswer === option || userVote === option
-//                           ? option === 'Yes' ? 'border-green-500 bg-green-500/10'
-//                             : option === 'No' ? 'border-red-500 bg-red-500/10'
-//                             : 'border-amber-500 bg-amber-500/10'
-//                           : 'border-transparent bg-muted/60 hover:bg-muted'
-//                       } ${hasVoted ? 'opacity-70' : ''}`}
-//                     >
-//                       {option === 'Yes' && <ThumbsUp size={28} className="text-green-400 mb-1" />}
-//                       {option === 'No' && <ThumbsDown size={28} className="text-red-400 mb-1" />}
-//                       {option === 'Vague' && <Users size={28} className="text-amber-400 mb-1" />}
-//                       <p className="font-semibold text-sm">{option}</p>
-//                     </button>
-//                   ))}
-//                 </div>
-
-//                 <Button
-//                   className="w-full h-12 text-base font-semibold"
-//                   onClick={handleVote}
-//                   disabled={submitting || !selectedAnswer || hasVoted}
-//                   style={{
-//                     background: hasVoted
-//                       ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-//                       : 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-//                   }}
-//                 >
-//                   {hasVoted ? `You Voted: ${userVote}` : submitting ? 'Submitting...' : 'Submit Vote'}
-//                 </Button>
-
-//                 <p className="text-xs text-center text-muted-foreground">
-//                   {hasVoted ? 'Your vote has been recorded!' : 'Voting does not affect your rank'}
-//                 </p>
-//               </div>
-//             )}
-//           </div>
-//         </motion.div>
-//       </div>
-
-//       <MobileNav />
-//     </div>
-//   );
-// }
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import { useState, useEffect } from 'react';
-// import { useNavigate, useParams } from 'react-router-dom';
-// import { motion } from 'framer-motion';
-// import { Button } from '@/app/components/ui/button';
-// import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
-// import { TopNav } from '@/app/components/TopNav';
-// import { MobileNav } from '@/app/components/MobileNav';
-// import {
-//   ArrowLeft,
-//   Clock,
-//   ThumbsUp,
-//   ThumbsDown,
-//   Target,
-//   CheckCircle2,
-//   Users,
-//   Globe,
-//   Lock,
-// } from 'lucide-react';
-// import { format } from 'date-fns';
-// import { toast } from 'sonner';
-// import { useAppSelector } from '@/app/store/hooks';
-// import { getAuth, postAuth } from '@/util/api';
-
-// const categoryColors: Record<string, string> = {
-//   trending: '#a855f7',
-//   politics: '#ef4444',
-//   sports: '#10b981',
-//   finance: '#fbbf24',
-//   education: '#06b6d4',
-//   entertainment: '#ec4899',
-// };
-
-
-
-
-// function computeOutcome(agreeP: number, disagreeP: number, vagueP: number): 'yes' | 'no' | 'vague' {
-//   if (vagueP > agreeP && vagueP > disagreeP) return 'vague';
-//   const margin = Math.abs(agreeP - disagreeP);
-//   if (margin < 10) return 'vague';
-//   return agreeP > disagreeP ? 'yes' : 'no';
-// }
-
-// function getResultLabel(
-//   totalVotes: number,
-//   agreeP: number,
-//   disagreeP: number,
-//   vagueP: number,
-// ): string {
-//   if (totalVotes === 0) return 'No votes yet';
-
-//   const margin = Math.abs(agreeP - disagreeP);
-
-//   if (vagueP > agreeP && vagueP > disagreeP) {
-//     if (vagueP >= 85) return `Overwhelmingly unclear (${vagueP}%)`;
-//     if (vagueP >= 60) return `Clearly unclear (${vagueP}% unclear)`;
-//     if (vagueP >= 45) return `Leaning unclear (${vagueP}% unclear)`;
-//   }
-
-//   if (margin <= 5 && vagueP < 40) {
-//     return `Too close to call (${agreeP}% vs ${disagreeP}%)`;
-//   }
-
-//   if (margin <= 3) return 'Highly uncertain (votes are split)';
-
-//   if (agreeP > disagreeP && agreeP > vagueP) {
-//     if (agreeP >= 85) return `Overwhelming YES (${agreeP}%)`;
-//     if (agreeP >= 60) return `Clear YES (${agreeP}% vs ${disagreeP}%)`;
-//     return `Leaning YES (${agreeP}% vs ${disagreeP}%)`;
-//   }
-
-//   if (disagreeP > agreeP && disagreeP > vagueP) {
-//     if (disagreeP >= 85) return `Overwhelming NO (${disagreeP}%)`;
-//     if (disagreeP >= 60) return `Clear NO (${disagreeP}% vs ${agreeP}%)`;
-//     return `Leaning NO (${disagreeP}% vs ${agreeP}%)`;
-//   }
-
-//   return `Too close to call (${agreeP}% vs ${disagreeP}%)`;
-// }
-
-// function getOutcomeFromLabel(label: string): 'yes' | 'no' | 'vague' {
-//   const l = label.toLowerCase();
-//   if (l.includes('yes')) return 'yes';
-//   if (l.includes('no')) return 'no';
-//   return 'vague';
-// }
-
-
-
-
-// export function PredictionDetailScreen() {
-//   const navigate = useNavigate();
-//   const { id } = useParams<{ id: string }>();
-//   const [prediction, setPrediction] = useState<any>(null);
-//   const [selectedAnswer, setSelectedAnswer] = useState<string>('');
-//   const [loading, setLoading] = useState(true);
-//   const [submitting, setSubmitting] = useState(false);
-//   const [fetchError, setFetchError] = useState<string | null>(null);
-
-//   const { user: currentUser } = useAppSelector((state) => state.auth);
-
-//   const formatDateCompact = (dateStr?: string | null) => {
-//     if (!dateStr) return 'TBD';
-//     const date = new Date(dateStr);
-//     if (isNaN(date.getTime())) return 'TBD';
-//     return format(date, 'dd MMM');
-//   };
-
-//   useEffect(() => {
-//     if (!id) {
-//       setFetchError('No prediction ID provided');
-//       setLoading(false);
-//       return;
-//     }
-//     const fetchPrediction = async () => {
-//       try {
-//         setLoading(true);
-//         setFetchError(null);
-//         const data = await getAuth(`/api/predictions/${id}`);
-//         setPrediction(data);
-//       } catch (err: any) {
-//         setFetchError(err.message || 'Failed to load prediction');
-//         toast.error('Could not load prediction');
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-//     fetchPrediction();
-//   }, [id]);
-
-//   const handleVote = async () => {
-//     if (!selectedAnswer) {
-//       toast.error('Please select an answer');
-//       return;
-//     }
-//     setSubmitting(true);
-//     try {
-//       await postAuth('/api/answers', {
-//         question_id: id,
-//         answer: selectedAnswer.trim(),
-//       });
-//       toast.success('Vote submitted successfully!');
-//       setSelectedAnswer('');
-//       const refreshed = await getAuth(`/api/predictions/${id}`);
-//       if (refreshed) setPrediction(refreshed);
-//     } catch (err: any) {
-//       toast.error(err.message || 'Failed to submit vote');
-//     } finally {
-//       setSubmitting(false);
-//     }
-//   };
-
-//   if (loading) {
-//     return (
-//       <div className="min-h-screen bg-background flex items-center justify-center">
-//         <p className="text-muted-foreground animate-pulse">Loading prediction...</p>
-//       </div>
-//     );
-//   }
-
-//   if (fetchError || !prediction) {
-//     return (
-//       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-6">
-//         <h2 className="text-xl font-bold text-red-400">Error</h2>
-//         <p className="text-muted-foreground text-center">{fetchError || 'Prediction not found'}</p>
-//         <Button onClick={() => navigate(-1)} variant="outline">Go Back</Button>
-//       </div>
-//     );
-//   }
-
-//   // Voting Stats
-//   const answers = Array.isArray(prediction?.answers) ? prediction.answers : [];
-//   const yesCount = answers.filter((a: any) => a.answer?.toLowerCase() === 'yes').length;
-//   const noCount = answers.filter((a: any) => a.answer?.toLowerCase() === 'no').length;
-//   const vagueCount = answers.filter((a: any) => a.answer?.toLowerCase() === 'vague').length;
-//   const totalValidVotes = yesCount + noCount + vagueCount;
-
-//   const agreePercentage = totalValidVotes > 0 ? Math.round((yesCount / totalValidVotes) * 100) : 0;
-//   const disagreePercentage = totalValidVotes > 0 ? Math.round((noCount / totalValidVotes) * 100) : 0;
-//   const vaguePercentage = totalValidVotes > 0 ? Math.round((vagueCount / totalValidVotes) * 100) : 0;
-
-//   const isClosed = prediction?.end_date ? new Date(prediction.end_date) < new Date() : false;
-//   const hasVoted = answers.some((a: any) => a.user_id === currentUser?.id);
-//   const userVote = answers.find((a: any) => a.user_id === currentUser?.id)?.answer?.toUpperCase();
-
-//   const catColor = categoryColors[prediction?.field?.fields?.toLowerCase() || 'trending'] || '#a855f7';
-
-//   // Final Result: Use official backend result if available, else calculate
-//   // const finalResult = prediction.correct_answer || 
-//   //   (agreePercentage >= 60 ? 'Yes' : 
-//   //    disagreePercentage >= 60 ? 'No' : 'Vague');
-
-//   const resultLabel = getResultLabel(
-//   totalValidVotes,
-//   agreePercentage,
-//   disagreePercentage,
-//   vaguePercentage
-// );
-
-// const outcome = getOutcomeFromLabel(resultLabel);
-
-// const finalResult = prediction.correct_answer || outcome.toUpperCase();
-
-//   return (
-//     <div className="h-screen bg-background flex flex-col overflow-hidden">
-//       <TopNav />
-
-//       <div className="flex-1 overflow-y-auto px-4 pt-3 pb-6">
-//         <motion.div
-//           initial={{ opacity: 0, y: 12 }}
-//           animate={{ opacity: 1, y: 0 }}
-//           className="max-w-lg mx-auto flex flex-col gap-3"
-//         >
-//           {/* Header */}
-//           <div className="flex items-center justify-between flex-wrap gap-2">
-//             <button onClick={() => navigate(-1)} className="p-1 -ml-1">
-//               <ArrowLeft size={22} />
-//             </button>
-
-//             <div className="flex items-center gap-2">
-//               <span
-//                 className="px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-widest"
-//                 style={{ backgroundColor: `${catColor}22`, color: catColor }}
-//               >
-//                 {prediction?.field?.fields || 'General'}
-//               </span>
-
-//               <span className={`px-3 py-0.5 rounded-full text-xs font-bold uppercase ${
-//                 isClosed ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'
-//               }`}>
-//                 {isClosed ? 'CLOSED' : 'OPEN'}
-//               </span>
-
-//               <div className={`flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-bold border ${
-//                 prediction?.visibility === 'private'
-//                   ? 'bg-amber-500/10 border-amber-500/30 text-amber-600'
-//                   : 'bg-blue-500/10 border-blue-500/30 text-blue-600'
-//               }`}>
-//                 {prediction?.visibility === 'private' ? <Lock size={13} /> : <Globe size={13} />}
-//                 {prediction?.visibility === 'private' ? 'PRIVATE' : 'PUBLIC'}
-//               </div>
-//             </div>
-//           </div>
-
-//           {/* Question Card */}
-//           <div className="glass-card rounded-2xl p-4">
-//             <h1 className="text-lg font-semibold leading-tight">
-//               {prediction.questions || 'No question text'} 
-
-//  <div className={`inline-flex items-center justify-center px-1 py-2 rounded-xl text-2xl font-bold border-2 shadow-inner ${
-//   finalResult === 'Yes' 
-//     ? 'border-green-100 text-green-400 bg-green-500/10' 
-//     : finalResult === 'No' 
-//     ? 'border-red-500 text-red-400 bg-red-500/10' 
-//     : 'border-amber-100 text-amber-400 bg-amber-500/10'
-// }`}>
-//   {finalResult}
-// </div>
-
-//             </h1>
-//             <div className="flex items-center gap-2 mt-3">
-//               <Avatar className="w-5 h-5">
-//                 <AvatarImage src={prediction.user?.avatar_url} />
-//                 <AvatarFallback className="text-xs">@P</AvatarFallback>
-//               </Avatar>
-//               <span className="text-sm text-muted-foreground">
-//                 @{prediction.user?.username || 'anonymous'}
-//               </span>
-//             </div>
-//           </div>
-
-//           {/* Timeline Card */}
-//           <div className="glass-card rounded-2xl p-4">
-//             <div className="flex items-center gap-3">
-//               <Clock size={18} className="text-muted-foreground flex-shrink-0" />
-//               <div className="flex-1">
-//                 <p className="text-xs text-muted-foreground font-medium mb-2">TIMELINE</p>
-//                 <p className="text-sm font-medium">
-//                   Prediction Due : {formatDateCompact(prediction.end_date)} | 
-//                   Voting End : {formatDateCompact(prediction.end_date)}
-//                 </p>
-//               </div>
-//             </div>
-//           </div>
-
-//           {/* Main Card - Voting or Result */}
-//           <div className="glass-card rounded-2xl p-5 ">
-//             <div className="flex items-center gap-2 mb-4">
-//               <Target size={18} className="text-blue-400" />
-//               <h3 className="font-semibold">
-//                 {isClosed ? 'Final Result' : 'Your Prediction'}
-//               </h3>
-//             </div>
-
-//             {isClosed ? (
-//               /* ==================== CLOSED RESULT UI ==================== */
-//               <div className="space-y-6 text-center ">
-//                 {/* Big Result Box */}
-//                 {/* <div className={`inline-flex items-center justify-center px-10 py-6 rounded-3xl text-5xl font-bold border-4 shadow-inner ${
-//                   finalResult === 'Yes' 
-//                     ? 'border-green-500 text-green-400 bg-green-500/10' 
-//                     : finalResult === 'No' 
-//                     ? 'border-red-500 text-red-400 bg-red-500/10' 
-//                     : 'border-amber-500 text-amber-400 bg-amber-500/10'
-//                 }`}>
-//                   {finalResult}
-//                 </div> */}
-//                 {/* <div className={`inline-flex items-center justify-center px-6 py-3 rounded-xl text-2xl font-bold border-2 shadow-inner ${
-//   finalResult === 'Yes' 
-//     ? 'border-green-500 text-green-400 bg-green-500/10' 
-//     : finalResult === 'No' 
-//     ? 'border-red-500 text-red-400 bg-red-500/10' 
-//     : 'border-amber-500 text-amber-400 bg-amber-500/10'
-// }`}>
-//   {finalResult}
-// </div> */}
-
-//                 <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-sm font-medium
-// ${outcome === 'yes'
-//   ? 'bg-green-500/10 border-green-500/30 text-green-400'
-//   : outcome === 'no'
-//   ? 'bg-red-500/10 border-red-500/30 text-red-400'
-//   : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-// }`}>
-//   {resultLabel}
-// </div>
-
-//                 <p className="text-sm text-muted-foreground font-medium">
-//                   {prediction.correct_answer ? 'Official Result' : 'Based on Community Votes'}
-//                 </p>
-
-//                 {/* Vote Distribution Bar */}
-//                 {totalValidVotes > 0 && (
-//                   <div className="space-y-3 ">
-//                     <div className="h-3 bg-muted rounded-full overflow-hidden flex">
-//                       <div 
-//                         className="h-full bg-green-500 transition-all" 
-//                         style={{ width: `${agreePercentage}%` }} 
-//                       />
-//                       <div 
-//                         className="h-full bg-red-500 transition-all" 
-//                         style={{ width: `${disagreePercentage}%` }} 
-//                       />
-//                       <div 
-//                         className="h-full bg-amber-500 transition-all" 
-//                         style={{ width: `${vaguePercentage}%` }} 
-//                       />
-//                     </div>
-
-//                     <div className="flex justify-between text-xs text-muted-foreground">
-//                       <span>Yes {agreePercentage}%</span>
-//                       <span>No {disagreePercentage}%</span>
-//                       <span>Vague {vaguePercentage}%</span>
-//                     </div>
-
-//                     <p className="text-center text-xs text-muted-foreground">
-//                       Based on {totalValidVotes} votes
-//                     </p>
-//                   </div>
-//                 )}
-//               </div>
-//             ) : (
-//               /* ==================== OPEN VOTING UI ==================== */
-//               <div className="space-y-5">
-//                 <p className="text-sm text-muted-foreground text-center">
-//                   Do you think this will happen?
-//                 </p>
-
-//                 <div className="grid grid-cols-3 gap-3">
-//                   {['Yes', 'No', 'Vague'].map((option) => (
-//                     <button
-//                       key={option}
-//                       onClick={() => setSelectedAnswer(option)}
-//                       disabled={hasVoted}
-//                       className={`p-5 rounded-2xl border-2 flex flex-col items-center justify-center h-28 transition-all ${
-//                         selectedAnswer === option || userVote === option
-//                           ? option === 'Yes' 
-//                             ? 'border-green-500 bg-green-500/10' 
-//                             : option === 'No' 
-//                             ? 'border-red-500 bg-red-500/10' 
-//                             : 'border-amber-500 bg-amber-500/10'
-//                           : 'border-transparent bg-muted/60 hover:bg-muted'
-//                       } ${hasVoted ? 'opacity-70 cursor-default' : 'active:scale-95'}`}
-//                     >
-//                       {option === 'Yes' && <ThumbsUp size={32} className="text-green-400 mb-2" />}
-//                       {option === 'No' && <ThumbsDown size={32} className="text-red-400 mb-2" />}
-//                       {option === 'Vague' && <Users size={32} className="text-amber-400 mb-2" />}
-//                       <p className="font-semibold text-base">{option}</p>
-//                     </button>
-//                   ))}
-//                 </div>
-
-//                 <Button
-//                   className="w-full h-14 text-base font-semibold rounded-2xl"
-//                   onClick={handleVote}
-//                   disabled={submitting || !selectedAnswer || hasVoted}
-//                   style={{
-//                     background: hasVoted
-//                       ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-//                       : 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-//                   }}
-//                 >
-//                   {hasVoted ? `You Voted: ${userVote}` : submitting ? 'Submitting...' : 'Submit Vote'}
-//                 </Button>
-
-//                 <p className="text-xs text-center text-muted-foreground">
-//                   {hasVoted ? 'Your vote has been recorded!' : 'Voting does not affect your rank'}
-//                 </p>
-//               </div>
-//             )}
-//           </div>
-//         </motion.div>
-//       </div>
-
-//       <MobileNav />
-//     </div>
-//   );
-// }
-
-
-
-
-
-
-
-
-
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -863,6 +5,7 @@ import { Button } from '@/app/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
 import { TopNav } from '@/app/components/TopNav';
 import { MobileNav } from '@/app/components/MobileNav';
+import { Twitter, Send, MessageCircle, Link2 } from "lucide-react";
 import {
   ArrowLeft,
   Clock,
@@ -876,6 +19,9 @@ import {
   XCircle,
   HelpCircle,
   ExternalLink,
+  ShieldCheck,
+  TrendingUp,
+  Trophy,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { format } from 'date-fns';
@@ -977,23 +123,22 @@ export function PredictionDetailScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground animate-pulse">Loading prediction...</p>
+      <div className="min-h-screen bg-[#f8f8f6] dark:bg-[#0f0f0f] flex items-center justify-center">
+        <p className="text-muted-foreground animate-pulse font-bold text-xs uppercase tracking-widest">Loading...</p>
       </div>
     );
   }
 
   if (fetchError || !prediction) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-6">
-        <h2 className="text-xl font-bold text-red-400">Error</h2>
-        <p className="text-muted-foreground text-center">{fetchError || 'Prediction not found'}</p>
-        <Button onClick={() => navigate(-1)} variant="outline">Go Back</Button>
+      <div className="min-h-screen bg-[#f8f8f6] dark:bg-[#0f0f0f] flex flex-col items-center justify-center gap-2 p-6">
+        <h2 className="text-sm font-black text-red-400 uppercase">Error</h2>
+        <p className="text-muted-foreground text-[10px] text-center font-bold uppercase">{fetchError || 'Not found'}</p>
+        <Button onClick={() => navigate(-1)} variant="outline" size="sm" className="h-8 rounded-lg text-[10px] font-bold uppercase">Back</Button>
       </div>
     );
   }
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
   const answers = Array.isArray(prediction?.answers) ? prediction.answers : [];
   const yesCount = answers.filter((a: any) => a.answer?.toLowerCase() === 'yes').length;
   const noCount = answers.filter((a: any) => a.answer?.toLowerCase() === 'no').length;
@@ -1009,363 +154,308 @@ export function PredictionDetailScreen() {
   const userVote = answers.find((a: any) => a.user_id === currentUser?.id)?.answer?.toUpperCase();
 
   const catColor = categoryColors[prediction?.field?.fields?.toLowerCase() || 'trending'] || '#a855f7';
-
   const resultLabel = getResultLabel(totalValidVotes, agreePercentage, disagreePercentage, vaguePercentage);
   const outcome = getOutcomeFromLabel(resultLabel);
-  const finalResult = prediction.correct_answer || outcome.toUpperCase();
 
   const pillConfig = {
-    yes:   { bg: 'bg-green-500/15',  border: 'border-green-500/40',  text: 'text-green-400',  icon: <CheckCircle2 size={10} />, label: 'YES'   },
-    no:    { bg: 'bg-red-500/15',    border: 'border-red-500/40',    text: 'text-red-400',    icon: <XCircle size={10} />,      label: 'NO'    },
-    vague: { bg: 'bg-amber-500/15',  border: 'border-amber-500/40',  text: 'text-amber-400',  icon: <HelpCircle size={10} />,   label: 'VAGUE' },
+    yes: { bg: 'bg-green-500/15', border: 'border-green-500/40', text: 'text-green-500', icon: <CheckCircle2 size={10} />, label: 'YES' },
+    no: { bg: 'bg-red-500/15', border: 'border-red-500/40', text: 'text-red-500', icon: <XCircle size={10} />, label: 'NO' },
+    vague: { bg: 'bg-amber-500/15', border: 'border-amber-500/40', text: 'text-amber-500', icon: <HelpCircle size={10} />, label: 'VAGUE' },
   }[outcome];
 
   const showResultPill = isClosed || hasVoted;
 
   return (
-    /**
-     * Layout strategy:
-     *  - Root: h-screen flex-col overflow-hidden  → locks to viewport
-     *  - TopNav: fixed height, shrink-0
-     *  - Scroll area: flex-1 overflow-y-auto      → only THIS scrolls
-     *  - MobileNav: fixed height, shrink-0        → always visible above content
-     *
-     * The scroll area has padding-bottom equal to the MobileNav height so
-     * the last card never hides behind the nav bar.
-     */
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
+    <div className="h-screen bg-[#f8f8f6] dark:bg-[#0f0f0f] flex flex-col overflow-hidden text-slate-800 dark:text-slate-100">
       <TopNav />
 
-      {/*
-        KEY FIX:
-        - flex-1        → takes all space between TopNav and MobileNav
-        - overflow-y-auto → scrolls when content is taller than available space
-        - MobileNav is OUTSIDE this div so it always stays at the bottom
-      */}
-      <div className="flex-1 overflow-y-auto px-4 pt-3">
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto px-2 md:px-4 lg:px-6 pt-2 custom-scrollbar">
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-lg mx-auto flex flex-col gap-3 pb-6"
+          className="max-w-6xl mx-auto w-full flex flex-col gap-1.5 pb-20"
         >
-          {/* ── Header badges ──────────────────────────────────────── */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={() => navigate(-1)} className="p-1 -ml-1 shrink-0">
-              <ArrowLeft size={22} />
+          {/* ── Header Badges ── */}
+          <div className="flex items-center gap-1.5 flex-wrap px-0.5">
+            <button onClick={() => navigate(-1)} className="p-1 hover:bg-slate-200 dark:hover:bg-white/10 rounded-full transition-all active:scale-90">
+              <ArrowLeft size={18} />
             </button>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <span
-                className="px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-widest"
-                style={{ backgroundColor: `${catColor}22`, color: catColor }}
-              >
-                {prediction?.field?.fields || 'General'}
-              </span>
+            <span
+              className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-[0.1em] border border-transparent shadow-sm"
+              style={{ backgroundColor: `${catColor}22`, color: catColor, borderColor: `${catColor}33` }}
+            >
+              {prediction?.field?.fields || 'GENERAL'}
+            </span>
 
-              <span className={`px-3 py-0.5 rounded-full text-xs font-bold uppercase ${
-                isClosed ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'
-              }`}>
-                {isClosed ? 'CLOSED' : 'OPEN'}
-              </span>
+            <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-[0.1em] shadow-sm border ${
+              isClosed ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-green-500/10 border-green-500/20 text-green-500'
+            }`}>
+              {isClosed ? 'CLOSED' : 'OPEN'}
+            </span>
 
-              <div className={`flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-bold border ${
-                prediction?.visibility === 'private'
-                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-600'
-                  : 'bg-blue-500/10 border-blue-500/30 text-blue-600'
-              }`}>
-                {prediction?.visibility === 'private' ? <Lock size={13} /> : <Globe size={13} />}
-                <span className="ml-0.5">
-                  {prediction?.visibility === 'private' ? 'PRIVATE' : 'PUBLIC'}
-                </span>
-              </div>
+            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-[0.1em] shadow-sm border ${
+              prediction?.visibility === 'private' ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-blue-500/10 border-blue-500/30 text-blue-600'
+            }`}>
+              {prediction?.visibility === 'private' ? <Lock size={10} /> : <Globe size={10} />}
+              {prediction?.visibility === 'private' ? 'PRIVATE' : 'PUBLIC'}
             </div>
           </div>
 
-          {/* ── Question Card ─────────────────────────────────────── */}
-          <div className="glass-card rounded-2xl p-4">
-            <div className="flex items-start gap-2">
-              <p className="text-sm font-medium">
-                {prediction.questions || 'No question text'}
-              </p>
+          {/* ── Main Layout Grid ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 items-start">
+            
+            {/* LEFT COLUMN (2/3) */}
+            <div className="lg:col-span-8 space-y-1.5">
 
-              {/* Inline result pill — top-right of question */}
-              {showResultPill && (
-                <div className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-bold
-                  ${pillConfig.bg} ${pillConfig.border} ${pillConfig.text}`}>
-                  {pillConfig.icon}
-                  <span>{pillConfig.label}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 mt-3">
-              <Avatar className="w-5 h-5">
-                <AvatarImage src={prediction.user?.avatar_url} />
-                <AvatarFallback className="text-xs">P</AvatarFallback>
-              </Avatar>
-              <span className="text-sm text-muted-foreground">
-                @{prediction.user?.username || 'anonymous'}
-              </span>
-            </div>
-          </div>
-
-          {/* ── Timeline Card ─────────────────────────────────────── */}
-          <div className="glass-card rounded-2xl p-4">
-            <div className="flex items-center gap-3">
-              <Clock size={18} className="text-muted-foreground flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-xs text-muted-foreground font-medium mb-1">TIMELINE</p>
-                <p className="text-sm font-medium">
-                  Prediction Due : {formatDateCompact(prediction.end_date)}
-                  {' | '}
-                  Voting End : {formatDateCompact(prediction.voting_end_date || prediction.end_date)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Main Card ─────────────────────────────────────────── */}
-          <div className="glass-card rounded-2xl p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <Target size={18} className="text-blue-400" />
-              <h3 className="font-semibold">
-                {isClosed ? 'Final Result' : 'Your Prediction'}
-              </h3>
-            </div>
-
-            {isClosed ? (
-              /* ════ CLOSED RESULT UI ════ */
-              <div className="space-y-4 text-center">
-                {/* Result label chip */}
-                <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-sm font-medium ${
-                  outcome === 'yes'
-                    ? 'bg-green-500/10 border-green-500/30 text-green-400'
-                    : outcome === 'no'
-                    ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                    : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                }`}>
-                  {resultLabel}
-                </div>
-
-                <p className="text-sm text-muted-foreground font-medium">
-                  {prediction.correct_answer ? 'Official Result' : 'Based on Community Votes'}
-                </p>
-
-                {/* Single segmented bar */}
-                {totalValidVotes > 0 && (
-                  <div className="space-y-2">
-                    <div className="h-3 rounded-full overflow-hidden flex bg-muted/40">
-                      {agreePercentage > 0 && (
-                        <div className="h-full transition-all duration-700"
-                          style={{ width: `${agreePercentage}%`, background: '#10b981' }} />
-                      )}
-                      {disagreePercentage > 0 && (
-                        <div className="h-full transition-all duration-700"
-                          style={{ width: `${disagreePercentage}%`, background: '#ef4444' }} />
-                      )}
-                      {vaguePercentage > 0 && (
-                        <div className="h-full transition-all duration-700"
-                          style={{ width: `${vaguePercentage}%`, background: '#f59e0b' }} />
-                      )}
+              {/* Banner Card - Premium Gradient */}
+              <div className="relative w-full rounded-2xl overflow-hidden shadow-xl bg-gradient-to-br from-[#0f0c29] via-[#1b1a4b] to-[#302b63] text-white group">
+                <div className="absolute top-0 right-0 w-1/2 h-full opacity-10 pointer-events-none transition-transform group-hover:scale-110 duration-700" style={{
+                  backgroundImage: "url('https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1000&auto=format&fit=crop')",
+                  backgroundSize: 'cover', backgroundPosition: 'right'
+                }}></div>
+                <div className="relative z-10 flex items-center justify-between p-4 md:p-6 lg:p-8">
+                  <div className="space-y-4">
+                    <h1 className="text-sm md:text-xl lg:text-2xl font-black leading-tight max-w-xl tracking-tight">
+                      {prediction.questions || 'Prediction Question'}
+                    </h1>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="w-5 h-5 lg:w-7 lg:h-7 border-2 border-white/20 shadow-md">
+                        <AvatarImage src={prediction.user?.avatar_url} />
+                        <AvatarFallback className="text-[8px] bg-slate-700">P</AvatarFallback>
+                      </Avatar>
+                      <span className="text-[10px] lg:text-sm font-bold text-white/90">@{prediction.user?.username || 'user'}</span>
                     </div>
-
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#10b981' }} />
-                        Yes {agreePercentage}%
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#ef4444' }} />
-                        No {disagreePercentage}%
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#f59e0b' }} />
-                        Vague {vaguePercentage}%
-                      </span>
-                    </div>
-
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <button className="flex items-center justify-center gap-1.5 mx-auto px-3 py-1.5 rounded-full bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/20 text-blue-400 transition-colors group">
-                          <span className="text-xs font-medium">
-                            Based on {totalValidVotes} vote{totalValidVotes !== 1 ? 's' : ''}
-                          </span>
-                          <ExternalLink size={10} className="opacity-50 group-hover:opacity-100 transition-opacity" />
-                        </button>
-                      </DialogTrigger>
-                      <DialogContent className="glass-card border-border sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle className="text-lg font-bold">Community Voting Details</DialogTitle>
-                        </DialogHeader>
-                        <div className="max-h-[60vh] overflow-y-auto space-y-2.5 pr-1">
-                          {answers.map((v: any, idx: number) => (
-                            <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-muted/30 border border-border/20">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="w-10 h-10 border border-border/50">
-                                  <AvatarImage src={v.user?.avatar_url} />
-                                  <AvatarFallback className="bg-muted text-xs font-bold">
-                                    {v.user?.username?.charAt(0).toUpperCase() || '?'}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <p className="text-sm font-bold">@{v.user?.username || 'anonymous'}</p>
-                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{v.user?.name || 'Voter'}</p>
-                                </div>
-                              </div>
-                              <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black tracking-widest border-2 shadow-sm ${
-                                v.answer?.toLowerCase() === 'yes' ? 'bg-green-500/10 border-green-500/20 text-green-400' :
-                                v.answer?.toLowerCase() === 'no' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
-                                'bg-amber-500/10 border-amber-500/20 text-amber-400'
-                              }`}>
-                                {v.answer?.toUpperCase()}
-                              </div>
-                            </div>
-                          ))}
-                          {answers.length === 0 && (
-                            <div className="text-center py-8">
-                              <Users size={40} className="mx-auto text-muted-foreground/20 mb-2" />
-                              <p className="text-muted-foreground text-sm font-medium">No votes yet</p>
-                            </div>
-                          )}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
                   </div>
-                )}
+                  {showResultPill && (
+                    <div className={`shrink-0 px-3 py-1.5 rounded-xl border-2 font-black text-[10px] lg:text-xs shadow-2xl backdrop-blur-md ${pillConfig.bg} ${pillConfig.border} ${pillConfig.text} animate-in zoom-in duration-500`}>
+                      {pillConfig.label} WON
+                    </div>
+                  )}
+                </div>
               </div>
 
-            ) : (
-              /* ════ OPEN VOTING UI ════ */
-              <div className="space-y-5">
-                <p className="text-sm text-muted-foreground text-center">
-                  Do you think this will happen?
-                </p>
+              {/* Timeline Card - Visual Polish */}
+              <div className="glass-card rounded-2xl px-4 py-4 border border-white/10 dark:border-white/5 bg-white/40 dark:bg-white/5 shadow-lg backdrop-blur-sm">
+                <div className="flex items-center gap-2 mb-6">
+                  <div className="w-6 h-6 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500">
+                    <Clock size={14} strokeWidth={2.5} />
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Live Journey</p>
+                </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  {(['Yes', 'No', 'Vague'] as const).map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => setSelectedAnswer(option)}
-                      disabled={hasVoted}
-                      className={`p-5 rounded-2xl border-2 flex flex-col items-center justify-center h-28 transition-all ${
-                        selectedAnswer === option || userVote === option
-                          ? option === 'Yes'
-                            ? 'border-green-500 bg-green-500/10'
-                            : option === 'No'
-                            ? 'border-red-500 bg-red-500/10'
-                            : 'border-amber-500 bg-amber-500/10'
-                          : 'border-transparent bg-muted/60 hover:bg-muted'
-                      } ${hasVoted ? 'opacity-70 cursor-default' : 'active:scale-95'}`}
+                <div className="relative px-4 lg:px-8">
+                  <div className="absolute top-[8px] lg:top-[12px] left-0 right-0 h-[2px] bg-slate-200 dark:bg-white/10" />
+                  <div className="absolute top-[8px] lg:top-[12px] left-0 h-[2px] bg-purple-500 transition-all duration-1000" style={{ width: '100%' }} />
+                  <div className="relative flex justify-between">
+                    {[
+                      { label: "Created", date: prediction.created_at, done: true },
+                      { label: "Voted", date: prediction.voting_end_date, done: true },
+                      { label: "Result", date: prediction.end_date, done: true },
+                    ].map((step, i) => (
+                      <div key={i} className="flex flex-col items-center text-center w-[30%] group">
+                        <div className={`w-4 h-4 lg:w-6 lg:h-6 z-10 flex items-center justify-center rounded-full text-[8px] lg:text-[10px] transition-all duration-500 ring-4 ring-white dark:ring-[#0f0f0f] ${
+                          step.done ? "bg-purple-500 text-white shadow-lg" : "border-2 border-purple-500 bg-background text-purple-500"
+                        }`}>
+                          {step.done ? "✓" : ""}
+                        </div>
+                        <p className="text-[9px] lg:text-[11px] mt-2 font-black uppercase tracking-tight text-slate-800 dark:text-slate-100">{step.label}</p>
+                        <p className="text-[8px] lg:text-[10px] text-slate-400 font-bold mt-0.5">{formatDateCompact(step.date)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Outcome / Interaction Card - Leaderboard Style */}
+              <div className="glass-card rounded-2xl p-4 lg:p-6 border border-white/10 dark:border-white/5 bg-white/40 dark:bg-white/5 shadow-lg">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                    <Target size={18} strokeWidth={2.5} />
+                  </div>
+                  <h3 className="text-xs lg:text-sm font-black uppercase tracking-widest">{isClosed ? 'Official Verdict' : 'Cast Forecast'}</h3>
+                </div>
+
+                {isClosed ? (
+                  <div className="text-center py-2">
+                    <div className={`px-8 py-3 rounded-[1.5rem] border-4 font-black text-sm lg:text-xl inline-block mb-6 shadow-xl ${pillConfig.bg} ${pillConfig.border} ${pillConfig.text}`}>
+                      {resultLabel}
+                    </div>
+                    {totalValidVotes > 0 && (
+                      <div className="max-w-md mx-auto space-y-4">
+                        <p className="text-[8px] lg:text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Vote Distribution</p>
+                        <div className="h-3 lg:h-4 rounded-full overflow-hidden flex bg-slate-100 dark:bg-white/5 shadow-inner">
+                          <div style={{ width: `${agreePercentage}%` }} className="bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all duration-1000" />
+                          <div style={{ width: `${disagreePercentage}%` }} className="bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.3)] transition-all duration-1000" />
+                          <div style={{ width: `${vaguePercentage}%` }} className="bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all duration-1000" />
+                        </div>
+                        <div className="flex justify-between text-[10px] lg:text-xs font-black text-slate-500 uppercase tracking-tight">
+                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Yes {agreePercentage}%</span>
+                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-rose-500" /> No {disagreePercentage}%</span>
+                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Vague {vaguePercentage}%</span>
+                        </div>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" className="h-8 md:h-10 px-6 rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-widest bg-white dark:bg-white/5 shadow-sm border-slate-200 dark:border-white/10 mt-4 transition-all hover:scale-105 active:scale-95">
+                              View Details ({totalValidVotes})
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="glass-card border-slate-200 dark:border-white/10 sm:max-w-md p-4">
+                            <DialogHeader className="mb-4">
+                              <DialogTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-500">Community Insights</DialogTitle>
+                            </DialogHeader>
+                            <div className="max-h-[60vh] overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
+                              {answers.map((v: any, idx: number) => (
+                                <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 transition-all hover:border-purple-500/20 group">
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="w-8 h-8 border-2 border-white dark:border-white/10 shadow-sm transition-transform group-hover:scale-110">
+                                      <AvatarImage src={v.user?.avatar_url} />
+                                      <AvatarFallback className="bg-slate-200 dark:bg-slate-700 text-[10px] font-black">
+                                        {v.user?.username?.charAt(0).toUpperCase() || '?'}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <p className="text-[10px] font-black leading-none text-slate-800 dark:text-white">@{v.user?.username || 'anonymous'}</p>
+                                      <div className="flex items-center gap-1.5 mt-1">
+                                        <div className="px-1 py-0.5 rounded-md bg-purple-500/10 text-purple-500 text-[7px] font-black">LVL {Math.floor((v.user?.points || 0) / 100) + 1}</div>
+                                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">{v.user?.accuracy || 0}% ACCURACY</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className={`px-2.5 py-1 rounded-lg text-[9px] font-black tracking-widest border-2 shadow-sm transition-all ${
+                                    v.answer?.toLowerCase() === 'yes' ? 'bg-green-500/10 border-green-500/20 text-green-500' :
+                                    v.answer?.toLowerCase() === 'no' ? 'bg-red-500/10 border-red-500/20 text-red-500' :
+                                    'bg-amber-500/10 border-amber-500/20 text-amber-500'
+                                  }`}>
+                                    {v.answer?.toUpperCase()}
+                                  </div>
+                                </div>
+                              ))}
+                              {answers.length === 0 && (
+                                <div className="text-center py-10">
+                                  <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-3">
+                                    <Users size={24} className="text-slate-300 dark:text-slate-600" />
+                                  </div>
+                                  <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">No votes recorded yet</p>
+                                </div>
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col md:flex-row gap-3 items-stretch">
+                    <div className="flex-1 grid grid-cols-3 gap-2">
+                      {(['Yes', 'No', 'Vague'] as const).map((option) => (
+                        <button
+                          key={option}
+                          onClick={() => setSelectedAnswer(option)}
+                          className={`py-3 rounded-xl border-2 transition-all font-black text-[10px] lg:text-xs uppercase tracking-widest ${
+                            selectedAnswer === option 
+                              ? "bg-purple-500 text-white border-purple-400 shadow-lg scale-95" 
+                              : "bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border-slate-100 dark:border-white/5"
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                    <Button 
+                      className="h-12 md:h-auto md:w-32 rounded-xl text-xs font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all"
+                      style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
+                      onClick={handleVote}
+                      disabled={submitting || !selectedAnswer || hasVoted}
                     >
-                      {option === 'Yes'   && <ThumbsUp   size={32} className="text-green-400 mb-2" />}
-                      {option === 'No'    && <ThumbsDown  size={32} className="text-red-400 mb-2" />}
-                      {option === 'Vague' && <Users       size={32} className="text-amber-400 mb-2" />}
-                      <p className="font-semibold text-base">{option}</p>
-                    </button>
-                  ))}
-                </div>
-
-                <Button
-                  className="w-full h-14 text-base font-semibold rounded-2xl"
-                  onClick={handleVote}
-                  disabled={submitting || !selectedAnswer || hasVoted}
-                  style={{
-                    background: hasVoted
-                      ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                      : 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-                  }}
-                >
-                  {hasVoted ? `You Voted: ${userVote}` : submitting ? 'Submitting...' : 'Submit Vote'}
-                </Button>
-
-                <p className="text-xs text-center text-muted-foreground">
-                  {hasVoted ? 'Your vote has been recorded!' : 'Voting does not affect your rank'}
-                </p>
-
-                {/* Community bar — visible after voting */}
-                {hasVoted && totalValidVotes > 0 && (
-                  <div className="space-y-2 pt-3 border-t border-border/30">
-                    <div className="h-2.5 rounded-full overflow-hidden flex bg-muted/40">
-                      {agreePercentage > 0 && (
-                        <div className="h-full" style={{ width: `${agreePercentage}%`, background: '#10b981' }} />
-                      )}
-                      {disagreePercentage > 0 && (
-                        <div className="h-full" style={{ width: `${disagreePercentage}%`, background: '#ef4444' }} />
-                      )}
-                      {vaguePercentage > 0 && (
-                        <div className="h-full" style={{ width: `${vaguePercentage}%`, background: '#f59e0b' }} />
-                      )}
-                    </div>
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#10b981' }} />
-                        Yes {agreePercentage}%
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#ef4444' }} />
-                        No {disagreePercentage}%
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#f59e0b' }} />
-                        Vague {vaguePercentage}%
-                      </span>
-                    </div>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <button className="flex items-center justify-center gap-1.5 mx-auto px-3 py-1.5 rounded-full bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/20 text-blue-400 transition-colors group">
-                          <span className="text-xs font-medium">
-                            Based on {totalValidVotes} vote{totalValidVotes !== 1 ? 's' : ''}
-                          </span>
-                          <ExternalLink size={10} className="opacity-50 group-hover:opacity-100 transition-opacity" />
-                        </button>
-                      </DialogTrigger>
-                      <DialogContent className="glass-card border-border sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle className="text-lg font-bold">Community Voting Details</DialogTitle>
-                        </DialogHeader>
-                        <div className="max-h-[60vh] overflow-y-auto space-y-2.5 pr-1 custom-scrollbar">
-                          {answers.map((v: any, idx: number) => (
-                            <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-muted/20 border border-border/10">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="w-9 h-9 border border-border/50">
-                                  <AvatarImage src={v.user?.avatar_url} />
-                                  <AvatarFallback className="bg-muted text-xs">
-                                    {v.user?.username?.charAt(0).toUpperCase() || '?'}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <p className="text-sm font-semibold">@{v.user?.username || 'anonymous'}</p>
-                                  <p className="text-[10px] text-muted-foreground">{v.user?.name || 'Voter'}</p>
-                                </div>
-                              </div>
-                              <div className={`px-3 py-1 rounded-lg text-[10px] font-black tracking-wider border ${
-                                v.answer?.toLowerCase() === 'yes' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
-                                v.answer?.toLowerCase() === 'no' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
-                                'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                              }`}>
-                                {v.answer?.toUpperCase()}
-                              </div>
-                            </div>
-                          ))}
-                          {answers.length === 0 && (
-                            <div className="text-center py-8">
-                              <Users size={40} className="mx-auto text-muted-foreground/20 mb-2" />
-                              <p className="text-muted-foreground text-sm font-medium">No votes yet</p>
-                            </div>
-                          )}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                      {submitting ? '...' : 'SUBMIT'}
+                    </Button>
                   </div>
                 )}
               </div>
-            )}
-          </div>
+            </div>
 
+            {/* RIGHT COLUMN (1/3) */}
+            <div className="lg:col-span-4 space-y-2 lg:sticky lg:top-0">
+              
+              {/* Summary Stats - Premium Card */}
+              <div className="glass-card rounded-2xl p-4 border border-white/10 dark:border-white/5 bg-white/40 dark:bg-white/5 shadow-lg backdrop-blur-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                    <TrendingUp size={14} strokeWidth={2.5} />
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Analytics</p>
+                </div>
+                <div className="space-y-1.5 text-[11px] lg:text-xs font-bold uppercase tracking-tight">
+                  <div className="flex justify-between items-center p-2 rounded-xl bg-slate-50/50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                    <span className="text-slate-400 text-[9px]">Due Date</span>
+                    <span className="text-slate-800 dark:text-slate-100">{formatDateCompact(prediction.end_date)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2 rounded-xl bg-slate-50/50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                    <span className="text-slate-400 text-[9px]">Voters</span>
+                    <span className="text-purple-500">{totalValidVotes} Participants</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2 rounded-xl bg-green-500/5 border border-green-500/10">
+                    <span className="text-green-600/60 text-[9px]">Live Status</span>
+                    <span className="text-green-500 font-black">ACTIVE</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Creator Card - Leaderboard Style Overlay */}
+              <div className="relative rounded-2xl overflow-hidden shadow-xl border border-white/10 bg-gradient-to-br from-[#1e1b4b] to-[#312e81] text-white">
+                <div className="absolute top-0 right-0 p-2 opacity-10">
+                  <Trophy size={60} strokeWidth={1} />
+                </div>
+                <div className="relative z-10 p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Avatar className="w-10 h-10 ring-2 ring-purple-500/50 ring-offset-2 ring-offset-[#1e1b4b] shadow-2xl">
+                      <AvatarImage src={prediction.user?.avatar_url} />
+                      <AvatarFallback className="text-xs bg-slate-800">P</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-black leading-none text-white tracking-tight">@{prediction.user?.username || 'user'}</p>
+                      <p className="text-[9px] text-white/50 mt-1 font-bold uppercase tracking-widest">Verified Creator</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 text-center border-t border-white/10 pt-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-black">8</p>
+                      <p className="text-[8px] text-white/40 uppercase font-black">Forecasts</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-black text-emerald-400">62%</p>
+                      <p className="text-[8px] text-white/40 uppercase font-black">Accuracy</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-black text-purple-400">145</p>
+                      <p className="text-[8px] text-white/40 uppercase font-black">Points</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Share Card - Compact & Clean */}
+              <div className="glass-card rounded-2xl p-4 border border-white/10 dark:border-white/5 bg-white/40 dark:bg-white/5 shadow-lg">
+                <div className="flex items-center justify-between">
+                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Broadcast</p>
+                  <div className="flex gap-2">
+                    {[Twitter, MessageCircle, Send, Link2].map((Icon, i) => (
+                      <button key={i} className="p-2 rounded-xl bg-white dark:bg-white/10 hover:bg-slate-50 dark:hover:bg-white/20 text-slate-500 dark:text-slate-300 transition-all active:scale-90 border border-slate-100 dark:border-white/5 shadow-sm">
+                        <Icon size={14} strokeWidth={2.5} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
         </motion.div>
       </div>
 
-      {/* MobileNav is OUTSIDE the scroll area — always pinned at bottom */}
       <MobileNav />
     </div>
   );
