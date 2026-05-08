@@ -85,6 +85,13 @@ class PredictionController extends Controller
 
         $prediction = Question::create($validated);
 
+        // Notify followers
+        $user = Auth::user();
+        $followers = $user->followers;
+        foreach ($followers as $follower) {
+            $follower->notify(new \App\Notifications\NewPredictionNotification($prediction, $user));
+        }
+
         // Attach to groups if group_ids are provided
         if ($request->has('group_ids')) {
             $groupIds = $request->get('group_ids', []);

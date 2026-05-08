@@ -39,6 +39,15 @@ const categoryColors: Record<string, string> = {
   technology: '#06b6d4',
 };
 
+const cardPalettes = [
+  { border: '#a855f7', bg: 'rgba(168,85,247,0.06)' },
+  { border: '#ec4899', bg: 'rgba(236,72,153,0.06)' },
+  { border: '#06b6d4', bg: 'rgba(6,182,212,0.06)' },
+  { border: '#10b981', bg: 'rgba(16,185,129,0.06)' },
+  { border: '#f59e0b', bg: 'rgba(245,158,11,0.06)' },
+  { border: '#3b82f6', bg: 'rgba(59,130,246,0.06)' },
+];
+
 function getResultLabel(totalVotes: number, agreeP: number, disagreeP: number, vagueP: number): string {
   if (totalVotes === 0) return 'No votes yet';
   const margin = Math.abs(agreeP - disagreeP);
@@ -131,10 +140,10 @@ export function PredictionDetailScreen() {
 
   if (fetchError || !prediction) {
     return (
-      <div className="min-h-screen bg-[#f8f8f6] dark:bg-[#0f0f0f] flex flex-col items-center justify-center gap-2 p-6">
-        <h2 className="text-sm font-black text-red-400 uppercase">Error</h2>
-        <p className="text-muted-foreground text-[10px] text-center font-bold uppercase">{fetchError || 'Not found'}</p>
-        <Button onClick={() => navigate(-1)} variant="outline" size="sm" className="h-8 rounded-lg text-[10px] font-bold uppercase">Back</Button>
+      <div className="min-h-screen bg-[#f8f8f6] dark:bg-[#0f0f0f] flex flex-col items-center justify-center gap-4 p-6">
+        <h2 className="text-lg font-black text-red-500 uppercase">Error</h2>
+        <p className="text-muted-foreground text-sm text-center font-bold uppercase">{fetchError || 'Not found'}</p>
+        <Button onClick={() => navigate(-1)} variant="outline"  className="h-10 px-6 rounded-xl text-xs font-bold uppercase">Back</Button>
       </div>
     );
   }
@@ -165,8 +174,20 @@ export function PredictionDetailScreen() {
 
   const showResultPill = isClosed || hasVoted;
 
+  const categoryImages: Record<string, string> = {
+    'SHAREMARKET': 'https://images.unsplash.com/photo-1611974717482-9828d2824246?q=80&w=1000&auto=format&fit=crop',
+    'MOVIES/ENTERTAINMENT': 'https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=1000&auto=format&fit=crop',
+    'POLITICS': 'https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?q=80&w=1000&auto=format&fit=crop',
+    'SPORTS': 'https://images.unsplash.com/photo-1504450758481-7338eba7524a?q=80&w=1000&auto=format&fit=crop',
+    'TECHNOLOGY': 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1000&auto=format&fit=crop',
+    'GENERAL': 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1000&auto=format&fit=crop'
+  };
+
+  const currentCat = prediction?.field?.fields?.toUpperCase() || 'GENERAL';
+  const bannerImage = categoryImages[currentCat] || categoryImages['GENERAL'];
+
   return (
-    <div className="h-screen bg-[#f8f8f6] dark:bg-[#0f0f0f] flex flex-col overflow-hidden text-slate-800 dark:text-slate-100">
+    <div className="h-screen bg-[#f8f8f6] dark:bg-[#0f0f0f] flex flex-col overflow-hidden text-[#111111] font-roboto">
       <TopNav />
 
       {/* Main Content Area */}
@@ -174,31 +195,31 @@ export function PredictionDetailScreen() {
         <motion.div
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-6xl mx-auto w-full flex flex-col gap-1.5 pb-20"
+          className="max-w-6xl mx-auto w-full flex flex-col gap-1 pb-16"
         >
           {/* ── Header Badges ── */}
           <div className="flex items-center gap-1.5 flex-wrap px-0.5">
-            <button onClick={() => navigate(-1)} className="p-1 hover:bg-slate-200 dark:hover:bg-white/10 rounded-full transition-all active:scale-90">
+            <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full transition-all active:scale-90">
               <ArrowLeft size={18} />
             </button>
 
             <span
-              className="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-[0.1em] border border-transparent shadow-sm"
-              style={{ backgroundColor: `${catColor}22`, color: catColor, borderColor: `${catColor}33` }}
+              className="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-tight border border-transparent"
+              style={{ backgroundColor: `${catColor}15`, color: catColor, borderColor: `${catColor}25` }}
             >
               {prediction?.field?.fields || 'GENERAL'}
             </span>
 
-            <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-[0.1em] shadow-sm border ${
-              isClosed ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-green-500/10 border-green-500/20 text-green-500'
+            <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-tight border ${
+              isClosed ? 'bg-red-50 text-red-500 border-red-100' : 'bg-emerald-50 text-emerald-500 border-emerald-100'
             }`}>
               {isClosed ? 'CLOSED' : 'OPEN'}
             </span>
 
-            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-[0.1em] shadow-sm border ${
-              prediction?.visibility === 'private' ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'bg-blue-500/10 border-blue-500/30 text-blue-600'
+            <div className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-tight border ${
+              prediction?.visibility === 'private' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-blue-50 text-blue-600 border-blue-100'
             }`}>
-              {prediction?.visibility === 'private' ? <Lock size={10} /> : <Globe size={10} />}
+              {prediction?.visibility === 'private' ? <Lock size={11} /> : <Globe size={11} />}
               {prediction?.visibility === 'private' ? 'PRIVATE' : 'PUBLIC'}
             </div>
           </div>
@@ -207,61 +228,70 @@ export function PredictionDetailScreen() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 items-start">
             
             {/* LEFT COLUMN (2/3) */}
-            <div className="lg:col-span-8 space-y-1.5">
+            <div className="lg:col-span-8 space-y-1">
 
-              {/* Banner Card - Premium Gradient */}
-              <div className="relative w-full rounded-2xl overflow-hidden shadow-xl bg-gradient-to-br from-[#0f0c29] via-[#1b1a4b] to-[#302b63] text-white group">
-                <div className="absolute top-0 right-0 w-1/2 h-full opacity-10 pointer-events-none transition-transform group-hover:scale-110 duration-700" style={{
-                  backgroundImage: "url('https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1000&auto=format&fit=crop')",
-                  backgroundSize: 'cover', backgroundPosition: 'right'
+              {/* Banner Card - Fresh Color */}
+              <div className="relative w-full rounded-2xl overflow-hidden shadow-sm border" style={{ borderLeft: `3px solid ${cardPalettes[0].border}`, background: cardPalettes[0].bg, borderColor: `${cardPalettes[0].border}30` }}>
+                <div className="absolute top-0 right-0 w-3/4 h-full opacity-[0.04] pointer-events-none" style={{
+                  backgroundImage: `url('${bannerImage}')`,
+                  backgroundSize: 'cover', backgroundPosition: 'center',
+                  maskImage: 'linear-gradient(to left, black, transparent)',
+                  WebkitMaskImage: 'linear-gradient(to left, black, transparent)'
                 }}></div>
-                <div className="relative z-10 flex items-center justify-between p-4 md:p-6 lg:p-8">
-                  <div className="space-y-4">
-                    <h1 className="text-sm md:text-xl lg:text-2xl font-black leading-tight max-w-xl tracking-tight">
+                <div className="relative z-10 flex items-center justify-between p-4 md:p-5">
+                  <div className="space-y-3">
+                    <h1 className="text-[15px] md:text-[18px] font-bold leading-tight max-w-2xl text-[#111111]">
                       {prediction.questions || 'Prediction Question'}
                     </h1>
                     <div className="flex items-center gap-2">
-                      <Avatar className="w-5 h-5 lg:w-7 lg:h-7 border-2 border-white/20 shadow-md">
+                      <Avatar className="w-6 h-6 border border-gray-200">
                         <AvatarImage src={prediction.user?.avatar_url} />
-                        <AvatarFallback className="text-[8px] bg-slate-700">P</AvatarFallback>
+                        <AvatarFallback className="text-[10px] bg-gray-100">P</AvatarFallback>
                       </Avatar>
-                      <span className="text-[10px] lg:text-sm font-bold text-white/90">@{prediction.user?.username || 'user'}</span>
+                      <span className="text-[12px] font-medium text-[#667781]">@{prediction.user?.username || 'user'}</span>
                     </div>
                   </div>
                   {showResultPill && (
-                    <div className={`shrink-0 px-3 py-1.5 rounded-xl border-2 font-black text-[10px] lg:text-xs shadow-2xl backdrop-blur-md ${pillConfig.bg} ${pillConfig.border} ${pillConfig.text} animate-in zoom-in duration-500`}>
+                    <div className={`shrink-0 px-3 py-1 rounded-xl border font-bold text-[11px] ${pillConfig.bg} ${pillConfig.border} ${pillConfig.text} animate-in zoom-in duration-500`}>
                       {pillConfig.label} WON
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Timeline Card - Visual Polish */}
-              <div className="glass-card rounded-2xl px-4 py-4 border border-white/10 dark:border-white/5 bg-white/40 dark:bg-white/5 shadow-lg backdrop-blur-sm">
+              {/* Live Journey - Proper Design */}
+              <div className="rounded-2xl px-5 py-5 border border-gray-100 dark:border-white/5 shadow-sm" style={{ borderLeft: `3px solid ${cardPalettes[1].border}`, background: cardPalettes[1].bg }}>
                 <div className="flex items-center gap-2 mb-6">
-                  <div className="w-6 h-6 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500">
-                    <Clock size={14} strokeWidth={2.5} />
-                  </div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Live Journey</p>
+                  <TrendingUp size={15} className="text-[#111111]" />
+                  <p className="text-[14px] font-bold text-[#111111]">Live Journey</p>
                 </div>
 
-                <div className="relative px-4 lg:px-8">
-                  <div className="absolute top-[8px] lg:top-[12px] left-0 right-0 h-[2px] bg-slate-200 dark:bg-white/10" />
-                  <div className="absolute top-[8px] lg:top-[12px] left-0 h-[2px] bg-purple-500 transition-all duration-1000" style={{ width: '100%' }} />
+                <div className="relative px-2">
+                  {/* Background Track */}
+                  <div className="absolute top-[12px] left-0 right-0 h-[3px] bg-gray-100 dark:bg-white/10 rounded-full" />
+                  
+                  {/* Dynamic Progress Track */}
+                  <div 
+                    className="absolute top-[12px] left-0 h-[3px] bg-gradient-to-r from-[#111111] to-[#444444] rounded-full transition-all duration-1000" 
+                    style={{ 
+                      width: isClosed ? '100%' : (new Date() > new Date(prediction.voting_end_date) ? '66%' : '33%') 
+                    }} 
+                  />
+
                   <div className="relative flex justify-between">
                     {[
                       { label: "Created", date: prediction.created_at, done: true },
-                      { label: "Voted", date: prediction.voting_end_date, done: true },
-                      { label: "Result", date: prediction.end_date, done: true },
+                      { label: "Voting Ends", date: prediction.voting_end_date, done: new Date() >= new Date(prediction.voting_end_date) },
+                      { label: "Prediction Due", date: prediction.end_date, done: isClosed },
                     ].map((step, i) => (
-                      <div key={i} className="flex flex-col items-center text-center w-[30%] group">
-                        <div className={`w-4 h-4 lg:w-6 lg:h-6 z-10 flex items-center justify-center rounded-full text-[8px] lg:text-[10px] transition-all duration-500 ring-4 ring-white dark:ring-[#0f0f0f] ${
-                          step.done ? "bg-purple-500 text-white shadow-lg" : "border-2 border-purple-500 bg-background text-purple-500"
+                      <div key={i} className="flex flex-col items-center text-center w-[33%]">
+                        <div className={`w-6 h-6 z-10 flex items-center justify-center rounded-full text-[10px] transition-all duration-500 ring-4 ring-white dark:ring-[#0f0f0f] ${
+                          step.done ? "bg-[#111111] text-white shadow-md" : "bg-gray-100 text-gray-400"
                         }`}>
-                          {step.done ? "✓" : ""}
+                          {step.done ? "✓" : i + 1}
                         </div>
-                        <p className="text-[9px] lg:text-[11px] mt-2 font-black uppercase tracking-tight text-slate-800 dark:text-slate-100">{step.label}</p>
-                        <p className="text-[8px] lg:text-[10px] text-slate-400 font-bold mt-0.5">{formatDateCompact(step.date)}</p>
+                        <p className={`text-[12px] mt-2 font-bold ${step.done ? "text-[#111111]" : "text-[#667781]"}`}>{step.label}</p>
+                        <p className="text-[11px] text-[#667781] font-medium mt-0.5">{formatDateCompact(step.date)}</p>
                       </div>
                     ))}
                   </div>
@@ -269,64 +299,61 @@ export function PredictionDetailScreen() {
               </div>
 
               {/* Outcome / Interaction Card - Leaderboard Style */}
-              <div className="glass-card rounded-2xl p-4 lg:p-6 border border-white/10 dark:border-white/5 bg-white/40 dark:bg-white/5 shadow-lg">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                    <Target size={18} strokeWidth={2.5} />
-                  </div>
-                  <h3 className="text-xs lg:text-sm font-black uppercase tracking-widest">{isClosed ? 'Official Verdict' : 'Cast Forecast'}</h3>
+              <div className="rounded-2xl p-4 md:p-5 border border-gray-100 dark:border-white/5 shadow-sm" style={{ borderLeft: `3px solid ${cardPalettes[2].border}`, background: cardPalettes[2].bg }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <Target size={16} className="text-[#667781]" />
+                  <h3 className="text-[12px] font-bold text-[#667781] uppercase tracking-wide">{isClosed ? 'Official Verdict' : 'Cast Forecast'}</h3>
                 </div>
 
                 {isClosed ? (
-                  <div className="text-center py-2">
-                    <div className={`px-8 py-3 rounded-[1.5rem] border-4 font-black text-sm lg:text-xl inline-block mb-6 shadow-xl ${pillConfig.bg} ${pillConfig.border} ${pillConfig.text}`}>
+                  <div className="text-center">
+                    <div className={`px-6 py-2 rounded-xl border-2 font-bold text-[15px] inline-block mb-4 shadow-sm ${pillConfig.bg} ${pillConfig.border} ${pillConfig.text}`}>
                       {resultLabel}
                     </div>
                     {totalValidVotes > 0 && (
-                      <div className="max-w-md mx-auto space-y-4">
-                        <p className="text-[8px] lg:text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Vote Distribution</p>
-                        <div className="h-3 lg:h-4 rounded-full overflow-hidden flex bg-slate-100 dark:bg-white/5 shadow-inner">
-                          <div style={{ width: `${agreePercentage}%` }} className="bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all duration-1000" />
-                          <div style={{ width: `${disagreePercentage}%` }} className="bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.3)] transition-all duration-1000" />
-                          <div style={{ width: `${vaguePercentage}%` }} className="bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all duration-1000" />
+                      <div className="max-w-md mx-auto space-y-2.5">
+                        <div className="h-3 rounded-full overflow-hidden flex bg-gray-100 dark:bg-white/5">
+                          <div style={{ width: `${agreePercentage}%` }} className="bg-emerald-500 transition-all duration-1000" />
+                          <div style={{ width: `${disagreePercentage}%` }} className="bg-rose-500 transition-all duration-1000" />
+                          <div style={{ width: `${vaguePercentage}%` }} className="bg-amber-500 transition-all duration-1000" />
                         </div>
-                        <div className="flex justify-between text-[10px] lg:text-xs font-black text-slate-500 uppercase tracking-tight">
-                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Yes {agreePercentage}%</span>
-                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-rose-500" /> No {disagreePercentage}%</span>
-                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Vague {vaguePercentage}%</span>
+                        <div className="flex justify-between text-[12px] font-bold text-[#111111] tracking-tight px-1">
+                          <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Yes {agreePercentage}%</span>
+                          <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-rose-500" /> No {disagreePercentage}%</span>
+                          <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Vague {vaguePercentage}%</span>
                         </div>
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button variant="outline" className="h-8 md:h-10 px-6 rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-widest bg-white dark:bg-white/5 shadow-sm border-slate-200 dark:border-white/10 mt-4 transition-all hover:scale-105 active:scale-95">
+                            <Button variant="outline" className="h-10 px-8 rounded-xl text-[13px] font-medium bg-white dark:bg-white/5 border-gray-200 mt-6 hover:bg-gray-50 transition-all">
                               View Details ({totalValidVotes})
                             </Button>
                           </DialogTrigger>
                           <DialogContent className="glass-card border-slate-200 dark:border-white/10 sm:max-w-md p-4">
                             <DialogHeader className="mb-4">
-                              <DialogTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-500">Community Insights</DialogTitle>
+                              <DialogTitle className="text-[14px] font-bold text-[#111111] uppercase tracking-wide">Community Insights</DialogTitle>
                             </DialogHeader>
                             <div className="max-h-[60vh] overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
                               {answers.map((v: any, idx: number) => (
                                 <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 transition-all hover:border-purple-500/20 group">
                                   <div className="flex items-center gap-3">
-                                    <Avatar className="w-8 h-8 border-2 border-white dark:border-white/10 shadow-sm transition-transform group-hover:scale-110">
+                                    <Avatar className="w-9 h-9 border border-gray-100">
                                       <AvatarImage src={v.user?.avatar_url} />
-                                      <AvatarFallback className="bg-slate-200 dark:bg-slate-700 text-[10px] font-black">
+                                      <AvatarFallback className="bg-gray-100 text-[12px] font-bold">
                                         {v.user?.username?.charAt(0).toUpperCase() || '?'}
                                       </AvatarFallback>
                                     </Avatar>
                                     <div>
-                                      <p className="text-[10px] font-black leading-none text-slate-800 dark:text-white">@{v.user?.username || 'anonymous'}</p>
-                                      <div className="flex items-center gap-1.5 mt-1">
-                                        <div className="px-1 py-0.5 rounded-md bg-purple-500/10 text-purple-500 text-[7px] font-black">LVL {Math.floor((v.user?.points || 0) / 100) + 1}</div>
-                                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">{v.user?.accuracy || 0}% ACCURACY</p>
+                                      <p className="text-[14px] font-bold text-[#111111]">@{v.user?.username || 'anonymous'}</p>
+                                      <div className="flex items-center gap-2 mt-0.5">
+                                        <div className="px-1.5 py-0.5 rounded bg-gray-100 text-[#667781] text-[10px] font-bold">LVL {Math.floor((v.user?.points || 0) / 100) + 1}</div>
+                                        <p className="text-[11px] text-[#667781] font-medium uppercase">{v.user?.accuracy || 0}% ACCURACY</p>
                                       </div>
                                     </div>
                                   </div>
-                                  <div className={`px-2.5 py-1 rounded-lg text-[9px] font-black tracking-widest border-2 shadow-sm transition-all ${
-                                    v.answer?.toLowerCase() === 'yes' ? 'bg-green-500/10 border-green-500/20 text-green-500' :
-                                    v.answer?.toLowerCase() === 'no' ? 'bg-red-500/10 border-red-500/20 text-red-500' :
-                                    'bg-amber-500/10 border-amber-500/20 text-amber-500'
+                                  <div className={`px-3 py-1 rounded-lg text-[12px] font-bold tracking-tight border ${
+                                    v.answer?.toLowerCase() === 'yes' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                    v.answer?.toLowerCase() === 'no' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                    'bg-amber-50 text-amber-600 border-amber-100'
                                   }`}>
                                     {v.answer?.toUpperCase()}
                                   </div>
@@ -337,7 +364,7 @@ export function PredictionDetailScreen() {
                                   <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-3">
                                     <Users size={24} className="text-slate-300 dark:text-slate-600" />
                                   </div>
-                                  <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">No votes recorded yet</p>
+                                  <p className="text-slate-400 text-xs font-black uppercase tracking-widest">No votes recorded yet</p>
                                 </div>
                               )}
                             </div>
@@ -354,10 +381,10 @@ export function PredictionDetailScreen() {
                         <button
                           key={option}
                           onClick={() => setSelectedAnswer(option)}
-                          className={`py-3 rounded-xl border-2 transition-all font-black text-[10px] lg:text-xs uppercase tracking-widest ${
+                          className={`py-3.5 rounded-xl border-2 transition-all font-bold text-[14px] uppercase tracking-wide ${
                             selectedAnswer === option 
-                              ? "bg-purple-500 text-white border-purple-400 shadow-lg scale-95" 
-                              : "bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border-slate-100 dark:border-white/5"
+                              ? "bg-[#111111] text-white border-[#111111] shadow-md" 
+                              : "bg-white dark:bg-white/5 border-gray-100 hover:bg-gray-50"
                           }`}
                         >
                           {option}
@@ -365,8 +392,7 @@ export function PredictionDetailScreen() {
                       ))}
                     </div>
                     <Button 
-                      className="h-12 md:h-auto md:w-32 rounded-xl text-xs font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all"
-                      style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
+                      className="h-14 md:h-auto md:w-36 rounded-xl text-[14px] font-bold bg-[#111111] hover:bg-[#222222] transition-all"
                       onClick={handleVote}
                       disabled={submitting || !selectedAnswer || hasVoted}
                     >
@@ -378,28 +404,29 @@ export function PredictionDetailScreen() {
             </div>
 
             {/* RIGHT COLUMN (1/3) */}
-            <div className="lg:col-span-4 space-y-2 lg:sticky lg:top-0">
+            <div className="lg:col-span-4 space-y-1 lg:sticky lg:top-0">
               
               {/* Summary Stats - Premium Card */}
-              <div className="glass-card rounded-2xl p-4 border border-white/10 dark:border-white/5 bg-white/40 dark:bg-white/5 shadow-lg backdrop-blur-sm">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-6 h-6 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                    <TrendingUp size={14} strokeWidth={2.5} />
-                  </div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Analytics</p>
+              <div className="rounded-2xl p-4 border border-gray-100 shadow-sm" style={{ borderLeft: `3px solid ${cardPalettes[3].border}`, background: cardPalettes[3].bg }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp size={15} className="text-[#667781]" />
+                  <p className="text-[12px] font-bold text-[#667781]">Analytics</p>
                 </div>
-                <div className="space-y-1.5 text-[11px] lg:text-xs font-bold uppercase tracking-tight">
-                  <div className="flex justify-between items-center p-2 rounded-xl bg-slate-50/50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
-                    <span className="text-slate-400 text-[9px]">Due Date</span>
-                    <span className="text-slate-800 dark:text-slate-100">{formatDateCompact(prediction.end_date)}</span>
+                <div className="space-y-1.5 text-[14px] font-medium text-[#111111]">
+                  <div className="flex flex-col p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100">
+                    <span className="text-[#667781] text-[11px] mb-1">Timeline</span>
+                    <span className="font-bold">
+                      {formatDateCompact(prediction.voting_end_date)} | {formatDateCompact(prediction.end_date)}
+                    </span>
+                    <p className="text-[10px] text-[#667781] mt-1">Voting Ends | Prediction Due</p>
                   </div>
-                  <div className="flex justify-between items-center p-2 rounded-xl bg-slate-50/50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
-                    <span className="text-slate-400 text-[9px]">Voters</span>
-                    <span className="text-purple-500">{totalValidVotes} Participants</span>
+                  <div className="flex justify-between items-center p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100">
+                    <span className="text-[#667781] text-[11px]">Voters</span>
+                    <span className="text-[#111111] font-bold">{totalValidVotes}</span>
                   </div>
-                  <div className="flex justify-between items-center p-2 rounded-xl bg-green-500/5 border border-green-500/10">
-                    <span className="text-green-600/60 text-[9px]">Live Status</span>
-                    <span className="text-green-500 font-black">ACTIVE</span>
+                  <div className="flex justify-between items-center p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                    <span className="text-emerald-600 text-[11px]">Status</span>
+                    <span className="text-emerald-600 font-bold uppercase">{isClosed ? 'Closed' : 'Active'}</span>
                   </div>
                 </div>
               </div>
@@ -409,42 +436,42 @@ export function PredictionDetailScreen() {
                 <div className="absolute top-0 right-0 p-2 opacity-10">
                   <Trophy size={60} strokeWidth={1} />
                 </div>
-                <div className="relative z-10 p-5">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Avatar className="w-10 h-10 ring-2 ring-purple-500/50 ring-offset-2 ring-offset-[#1e1b4b] shadow-2xl">
+                <div className="relative z-10 p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Avatar className="w-9 h-9 ring-2 ring-white/20 shadow-lg">
                       <AvatarImage src={prediction.user?.avatar_url} />
-                      <AvatarFallback className="text-xs bg-slate-800">P</AvatarFallback>
+                      <AvatarFallback className="text-xs bg-gray-800">P</AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="text-sm font-black leading-none text-white tracking-tight">@{prediction.user?.username || 'user'}</p>
-                      <p className="text-[9px] text-white/50 mt-1 font-bold uppercase tracking-widest">Verified Creator</p>
+                      <p className="text-[14px] font-bold leading-none text-white">@{prediction.user?.username || 'user'}</p>
+                      <p className="text-[10px] text-white/50 mt-1 font-medium uppercase">Verified Creator</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-1 text-center border-t border-white/10 pt-4">
-                    <div className="space-y-1">
-                      <p className="text-xs font-black">8</p>
-                      <p className="text-[8px] text-white/40 uppercase font-black">Forecasts</p>
+                  <div className="grid grid-cols-3 gap-2 text-center border-t border-white/10 pt-4">
+                    <div className="space-y-0.5">
+                      <p className="text-[13px] font-bold">8</p>
+                      <p className="text-[10px] text-white/40 font-medium">Forecasts</p>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-xs font-black text-emerald-400">62%</p>
-                      <p className="text-[8px] text-white/40 uppercase font-black">Accuracy</p>
+                    <div className="space-y-0.5">
+                      <p className="text-[13px] font-bold text-emerald-400">62%</p>
+                      <p className="text-[10px] text-white/40 font-medium">Accuracy</p>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-xs font-black text-purple-400">145</p>
-                      <p className="text-[8px] text-white/40 uppercase font-black">Points</p>
+                    <div className="space-y-0.5">
+                      <p className="text-[13px] font-bold text-amber-400">145</p>
+                      <p className="text-[10px] text-white/40 font-medium">Points</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Share Card - Compact & Clean */}
-              <div className="glass-card rounded-2xl p-4 border border-white/10 dark:border-white/5 bg-white/40 dark:bg-white/5 shadow-lg">
+              <div className="rounded-2xl p-3 border border-gray-100 shadow-sm" style={{ borderLeft: `3px solid ${cardPalettes[4].border}`, background: cardPalettes[4].bg }}>
                 <div className="flex items-center justify-between">
-                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Broadcast</p>
+                  <p className="text-[11px] font-bold text-[#667781] uppercase tracking-widest">Broadcast</p>
                   <div className="flex gap-2">
                     {[Twitter, MessageCircle, Send, Link2].map((Icon, i) => (
-                      <button key={i} className="p-2 rounded-xl bg-white dark:bg-white/10 hover:bg-slate-50 dark:hover:bg-white/20 text-slate-500 dark:text-slate-300 transition-all active:scale-90 border border-slate-100 dark:border-white/5 shadow-sm">
-                        <Icon size={14} strokeWidth={2.5} />
+                      <button key={i} className="p-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-[#667781] transition-all border border-gray-100">
+                        <Icon size={14} />
                       </button>
                     ))}
                   </div>
@@ -460,3 +487,13 @@ export function PredictionDetailScreen() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+

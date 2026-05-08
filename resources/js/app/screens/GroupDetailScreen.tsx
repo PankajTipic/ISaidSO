@@ -5,8 +5,12 @@ import { TopNav } from '@/app/components/TopNav';
 import { Button } from '@/app/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
-import { Loader2, MessageSquare, ChevronRight, Gavel, BarChart3, Clock, Users, Lock, Globe, ArrowLeft, LogOut, UserPlus, X } from 'lucide-react';
-import { motion } from 'motion/react';
+import { 
+    Loader2, MessageSquare, ChevronRight, Gavel, BarChart3, Clock, 
+    Users, Lock, Globe, ArrowLeft, LogOut, UserPlus, X, Shield, 
+    Calendar, AlertCircle
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { getAuth, postAuth, deleteAuth } from '@/util/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/app/components/ui/dialog';
@@ -52,6 +56,17 @@ interface Group {
     members?: GroupMember[];
 }
 
+const cardPalettes = [
+    { border: '#a855f7', bg: 'rgba(168,85,247,0.06)' },
+    { border: '#06b6d4', bg: 'rgba(6,182,212,0.06)' },
+    { border: '#10b981', bg: 'rgba(16,185,129,0.06)' },
+    { border: '#f59e0b', bg: 'rgba(245,158,11,0.06)' },
+    { border: '#3b82f6', bg: 'rgba(59,130,246,0.06)' },
+    { border: '#ec4899', bg: 'rgba(236,72,153,0.06)' },
+];
+
+const getPalette = (index: number) => cardPalettes[index % cardPalettes.length];
+
 export function GroupDetailScreen() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -61,11 +76,13 @@ export function GroupDetailScreen() {
     const [questions, setQuestions] = useState<GroupQuestion[]>([]);
     const [joinRequests, setJoinRequests] = useState<any[]>([]);
     const [requestsLoading, setRequestsLoading] = useState(false);
-
     const [leaving, setLeaving] = useState(false);
     const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
     const [newMemberUsername, setNewMemberUsername] = useState('');
     const [addingMember, setAddingMember] = useState(false);
+
+    const [removeMemberOpen, setRemoveMemberOpen] = useState(false);
+const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
     const fetchGroupDetails = async () => {
         try {
@@ -95,7 +112,8 @@ export function GroupDetailScreen() {
         try {
             setRequestsLoading(true);
             const res = await getAuth(`/api/groups/${id}/requests`);
-            setJoinRequests(res);
+            console.log('Join Requests fetched:', res);
+            setJoinRequests(res || []);
         } catch (error) {
             console.error('Failed to fetch join requests', error);
         } finally {
@@ -130,34 +148,54 @@ export function GroupDetailScreen() {
         }
     };
 
-    const handleRemoveMember = async (userId: number) => {
-        if (!window.confirm('Are you sure you want to remove this member?')) return;
-        try {
-            await deleteAuth(`/api/groups/${id}/members/${userId}`);
-            toast.success('Member removed');
-            fetchGroupDetails();
-        } catch (error) {
-            toast.error('Failed to remove member');
-        }
-    };
+    // const handleRemoveMember = async (userId: number) => {
+    //     if (!window.confirm('Are you sure you want to remove this member?')) return;
+    //     try {
+    //         await deleteAuth(`/api/groups/${id}/members/${userId}`);
+    //         toast.success('Member removed');
+    //         fetchGroupDetails();
+    //     } catch (error) {
+    //         toast.error('Failed to remove member');
+    //     }
+    // };
 
-    const handleLeaveGroup = async () => {
-    if (!group || leaving) return;
 
-    setLeaving(true);
+ const handleRemoveMember = (userId: number) => {
+    setSelectedUserId(userId);
+    setRemoveMemberOpen(true);
+};
+
+const confirmRemoveMember = async () => {
+    if (!selectedUserId) return;
 
     try {
-        await postAuth(`/api/groups/${group.id}/leave`);
-        toast.success(`You have left ${group.name}`);
-        navigate('/groups');
-    } catch (err: any) {
-        const msg = err?.response?.data?.message || 'Failed to leave group';
-        toast.error(msg);
-        console.error('Leave group failed:', err);
-    } finally {
-        setLeaving(false);
+        await deleteAuth(`/api/groups/${id}/members/${selectedUserId}`);
+
+        toast.success('Member removed');
+
+        fetchGroupDetails();
+
+        setRemoveMemberOpen(false);
+        setSelectedUserId(null);
+
+    } catch (error) {
+        toast.error('Failed to remove member');
     }
 };
+
+    const handleLeaveGroup = async () => {
+        if (!group || leaving) return;
+        setLeaving(true);
+        try {
+            await postAuth(`/api/groups/${group.id}/leave`);
+            toast.success(`You have left ${group.name}`);
+            navigate('/groups');
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Failed to leave group');
+        } finally {
+            setLeaving(false);
+        }
+    };
 
     useEffect(() => {
         if (id) fetchGroupDetails();
@@ -165,11 +203,11 @@ export function GroupDetailScreen() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-background">
+            <div className="min-h-screen bg-[#F8F9FB]">
                 <TopNav />
-                <div className="flex flex-col items-center justify-center py-32 gap-4">
-                    <Loader2 className="w-10 h-10 text-primary animate-spin" />
-                    <p className="text-muted-foreground font-medium">Loading group...</p>
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                    <Loader2 className="w-10 h-10 text-[#a855f7] animate-spin" />
+                    <p className="text-slate-500 font-medium text-sm">Loading group...</p>
                 </div>
                 <MobileNav />
             </div>
@@ -179,344 +217,468 @@ export function GroupDetailScreen() {
     if (!group) return null;
 
     return (
-        <div className="min-h-screen bg-background pb-24 md:pb-6">
+        <div className="min-h-screen bg-[#F8F9FB] pb-24 md:pb-6">
             <TopNav />
 
-            <div className="max-w-5xl mx-auto px-4 py-8">
-                <Button
-                    variant="ghost"
-                    onClick={() => navigate('/groups')}
-                    className="mb-6 hover:bg-muted -ml-2 text-muted-foreground"
-                >
-                    <ArrowLeft size={20} className="mr-2" />
-                    Back to Groups
-                </Button>
+            <div className="max-w-5xl mx-auto px-4 py-4 md:py-6">
+                {/* Navigation Header */}
+                <div className="flex items-center gap-3 mb-4 md:mb-6">
+                    <button
+                        onClick={() => navigate('/groups')}
+                        className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-slate-100 shadow-sm hover:bg-slate-50 transition-colors text-slate-600"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
+                    <div>
+                        <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Group Detail</h2>
+                        <button onClick={() => navigate('/groups')} className="text-base font-bold text-slate-900 hover:text-[#a855f7] transition-colors leading-none">
+                            Back to Groups
+                        </button>
+                    </div>
+                </div>
 
-                {/* Group Header */}
-                <div className="glass-card rounded-3xl p-6 md:p-10 border border-border mb-8 shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-8 opacity-5">
+                {/* Main Header Card */}
+                <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-slate-100 mb-4 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-[0.03] -mr-2 -mt-2 pointer-events-none">
                         <Users size={120} />
                     </div>
 
                     <div className="relative z-10">
-                        {/* <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-3">
-                                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{group.name}</h1>
-                                    {group.isPrivate ? (
-                                        <div className="p-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20">
-                                            <Lock size={18} />
-                                        </div>
-                                    ) : (
-                                        <div className="p-1.5 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20">
-                                            <Globe size={18} />
-                                        </div>
-                                    )}
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                            <div className="space-y-2">
+                                <div>
+                                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                                        <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight mr-1">{group.name}</h1>
+                                        {group.isPrivate && (
+                                            <div className="px-2 py-0.5 bg-red-50 text-red-600 text-[8px] font-black rounded-full border border-red-100 flex items-center gap-1 uppercase tracking-wider">
+                                                <Lock size={9} /> Private
+                                            </div>
+                                        )}
+                                        {group.isOwner && (
+                                            <div className="px-2 py-0.5 bg-violet-50 text-[#a855f7] text-[8px] font-black rounded-full border border-violet-100 flex items-center gap-1 uppercase tracking-wider">
+                                                <Shield size={9} /> Owner
+                                            </div>
+                                        )}
+                                    </div>
+                                    <p className="text-slate-500 text-xs md:text-sm max-w-2xl leading-tight font-medium">
+                                        {group.description}
+                                    </p>
                                 </div>
-                                <p className="text-muted-foreground text-lg max-w-2xl leading-relaxed">
-                                    {group.description}
-                                </p>
-                                <div className="flex flex-wrap items-center gap-4 text-sm font-medium pt-2">
-                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary">
-                                        <Users size={16} />
+
+                                <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-slate-50 border border-slate-100 text-slate-600 text-[9px] font-bold">
+                                        <Users size={12} className="text-[#a855f7]" />
                                         <span>{group.memberCount} Members</span>
                                     </div>
-                                    <div className="text-muted-foreground">
-                                        Created {new Date(group.createdAt).toLocaleDateString()}
+                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-slate-50 border border-slate-100 text-slate-600 text-[9px] font-bold">
+                                        <Calendar size={12} className="text-[#a855f7]" />
+                                        <span>Created {new Date(group.createdAt).toLocaleDateString()}</span>
                                     </div>
                                 </div>
                             </div>
-                        </div> */}
 
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-    <div className="space-y-3">
-        <div className="flex items-center gap-3">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{group.name}</h1>
-            {group.isPrivate ? (
-                <div className="p-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20">
-                    <Lock size={18} />
-                </div>
-            ) : (
-                <div className="p-1.5 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20">
-                    <Globe size={18} />
-                </div>
-            )}
-        </div>
-        <p className="text-muted-foreground text-lg max-w-2xl leading-relaxed">
-            {group.description}
-        </p>
-        <div className="flex flex-wrap items-center gap-4 text-sm font-medium pt-2">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary">
-                <Users size={16} />
-                <span>{group.memberCount} Members</span>
-            </div>
-            <div className="text-muted-foreground">
-                Created {new Date(group.createdAt).toLocaleDateString()}
-            </div>
-        </div>
-    </div>
+                            <div className="flex flex-row md:flex-col gap-2">
+                                {group.isOwner && (
+                                    <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button className="rounded-full h-9 md:h-10 px-4 shadow-md bg-[#a855f7] hover:bg-[#9333ea] font-bold text-[10px] md:text-xs">
+                                                <UserPlus size={14} className="mr-1.5" />
+                                                Add Member
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="rounded-3xl border-slate-100 shadow-2xl">
+                                            <DialogHeader>
+                                                <DialogTitle className="text-xl font-black">Add Direct Member</DialogTitle>
+                                            </DialogHeader>
+                                            <div className="space-y-4 py-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="username" className="font-bold text-slate-600 text-sm">Username</Label>
+                                                    <Input
+                                                        id="username"
+                                                        placeholder="Enter exact username"
+                                                        value={newMemberUsername}
+                                                        onChange={(e) => setNewMemberUsername(e.target.value)}
+                                                        className="h-11 rounded-xl border-slate-200 focus:ring-[#a855f7]"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <DialogFooter>
+                                                <Button
+                                                    onClick={handleAddMember}
+                                                    disabled={addingMember || !newMemberUsername.trim()}
+                                                    className="w-full h-11 rounded-xl bg-[#a855f7] hover:bg-[#9333ea] font-bold"
+                                                >
+                                                    {addingMember ? <Loader2 size={18} className="animate-spin mr-2" /> : null}
+                                                    Add Member
+                                                </Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
+                                )}
 
-    {group.isOwner && (
-        <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
-            <DialogTrigger asChild>
-                <Button className="rounded-full shadow-lg shadow-primary/20 bg-gradient-to-r from-primary to-purple-600">
-                    <UserPlus size={18} className="mr-2" />
-                    Add Member
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="glass-card sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Add Direct Member</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="username">Username</Label>
-                        <Input
-                            id="username"
-                            placeholder="Enter username"
-                            value={newMemberUsername}
-                            onChange={(e) => setNewMemberUsername(e.target.value)}
-                            className="glass-card"
-                        />
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button
-                        onClick={handleAddMember}
-                        disabled={addingMember || !newMemberUsername.trim()}
-                        className="w-full"
-                    >
-                        {addingMember ? <Loader2 size={18} className="animate-spin mr-2" /> : null}
-                        Add Member
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    )}
-
-    {group.isMember && !group.isOwner && (
-        <Button
-            variant="destructive"
-            size="lg"
-            disabled={leaving}
-            onClick={handleLeaveGroup}
-            className="gap-2 min-w-[140px] rounded-full"
-        >
-            {leaving ? (
-                <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Leaving...
-                </>
-            ) : (
-                <>
-                    <LogOut size={18} />
-                    Leave Group
-                </>
-            )}
-        </Button>
-    )}
-</div>
+                                {group.isMember && !group.isOwner && (
+                                    <Button
+                                        variant="outline"
+                                        disabled={leaving}
+                                        onClick={handleLeaveGroup}
+                                        className="rounded-full h-9 md:h-10 px-4 border-red-100 text-red-500 hover:bg-red-50 hover:text-red-600 font-bold text-[10px] md:text-xs transition-all"
+                                    >
+                                        {leaving ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <>
+                                                <LogOut size={14} className="mr-1.5" />
+                                                Leave
+                                            </>
+                                        )}
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 {/* Content Tabs */}
-                <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-8">
-                    <TabsList className="bg-muted/50 p-1 h-auto inline-flex overflow-x-auto max-w-full no-scrollbar">
-                        <TabsTrigger value="questions" className="px-8 py-2.5 rounded-md min-w-[120px]">
+                <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-3 md:space-y-4">
+                    <TabsList className="flex flex-wrap gap-2 bg-transparent p-0 h-auto w-full justify-start border-0 shadow-none">
+                        <TabsTrigger 
+                            value="questions" 
+                            className="
+                                px-4 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all border
+                                bg-white dark:bg-white/5
+                                border-slate-200 dark:border-white/10
+                                text-slate-600 dark:text-slate-400
+                                hover:border-[#a855f7]/40
+                                data-[state=active]:bg-[#a855f7]
+                                data-[state=active]:text-white
+                                data-[state=active]:border-[#a855f7]
+                                data-[state=active]:shadow-sm 
+                                h-8
+                            "
+                        >
                             Questions
                         </TabsTrigger>
-                        <TabsTrigger value="members" className="px-8 py-2.5 rounded-md min-w-[120px]">
+                        <TabsTrigger 
+                            value="members" 
+                            className="
+                                px-4 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all border
+                                bg-white dark:bg-white/5
+                                border-slate-200 dark:border-white/10
+                                text-slate-600 dark:text-slate-400
+                                hover:border-[#a855f7]/40
+                                data-[state=active]:bg-[#a855f7]
+                                data-[state=active]:text-white
+                                data-[state=active]:border-[#a855f7]
+                                data-[state=active]:shadow-sm
+                                h-8
+                            "
+                        >
                             Members
                         </TabsTrigger>
                         {group.isOwner && (
-                            <TabsTrigger value="requests" className="px-8 py-2.5 rounded-md min-w-[120px] relative">
+                            <TabsTrigger 
+                                value="requests" 
+                                className="
+                                    px-4 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all border
+                                    bg-white dark:bg-white/5
+                                    border-slate-200 dark:border-white/10
+                                    text-slate-600 dark:text-slate-400
+                                    hover:border-[#a855f7]/40
+                                    data-[state=active]:bg-[#a855f7]
+                                    data-[state=active]:text-white
+                                    data-[state=active]:border-[#a855f7]
+                                    data-[state=active]:shadow-sm
+                                    relative
+                                    h-8
+                                    
+                                "
+                            >
                                 Requests
-                                {joinRequests.length > 0 && (
-                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-[10px] text-white rounded-full flex items-center justify-center font-bold">
-                                        {joinRequests.length}
+                                {(Array.isArray(joinRequests) ? joinRequests.length : (joinRequests as any)?.data?.length) > 0 && (
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-[8px] text-white rounded-full flex items-center justify-center font-black border-2 border-white shadow-sm">
+                                        {Array.isArray(joinRequests) ? joinRequests.length : (joinRequests as any)?.data?.length}
                                     </span>
                                 )}
                             </TabsTrigger>
                         )}
                     </TabsList>
 
+                    {/* Questions Tab Content */}
                     <TabsContent value="questions" className="mt-0 focus:outline-none">
-                        {questions.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {questions.map((q) => (
-                                    <motion.div
-                                        key={q.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        onClick={() => navigate(q.module_type === 'prediction' ? `/prediction/${q.id}` : `/poll/${q.id}`)}
-                                        className="glass-card rounded-2xl p-6 border border-border hover:border-primary/30 transition-all group cursor-pointer shadow-lg hover:shadow-primary/5"
-                                    >
-                                        <div className="flex items-start justify-between gap-4 mb-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className={`p-2 rounded-lg ${q.module_type === 'prediction' ? 'bg-primary/10 text-primary' : 'bg-blue-500/10 text-blue-400'}`}>
-                                                    {q.module_type === 'prediction' ? <Gavel size={16} /> : <BarChart3 size={16} />}
-                                                </div>
-                                                <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-70">
-                                                    {q.field.fields}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground px-2 py-1 bg-muted rounded-md self-start">
-                                                <Clock size={14} />
-                                                Ends {new Date(q.end_date).toLocaleDateString()}
-                                            </div>
-                                        </div>
-
-                                        <h4 className="font-bold text-lg mb-6 leading-tight group-hover:text-primary transition-colors line-clamp-2 min-h-[3.5rem]">
-                                            {q.text}
-                                        </h4>
-
-                                        <div className="flex items-center justify-between mt-auto pt-4 border-t border-border">
-                                            <div className="flex items-center gap-2.5">
-                                                <Avatar className="w-8 h-8 border border-border">
-                                                    <AvatarImage src={q.user.avatar || undefined} />
-                                                    <AvatarFallback className="text-[10px] font-bold bg-primary/20 text-primary">
-                                                        {q.user.username[0].toUpperCase()}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs font-bold">@{q.user.username}</span>
-                                                    <span className="text-[10px] text-muted-foreground">Creator</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-3">
-                                                <div className="text-[11px] font-black uppercase tracking-tighter text-muted-foreground bg-muted px-2 py-1 rounded">
-                                                    {q.module_type === 'prediction' ? (
-                                                        `${(q.yes_count || 0) + (q.no_count || 0)} Predictions`
-                                                    ) : (
-                                                        `${q.answers_count || 0} Votes`
-                                                    )}
-                                                </div>
-                                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
-                                                    <ChevronRight size={18} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="py-20 text-center bg-muted/30 rounded-3xl border border-dashed border-border shadow-inner">
-                                <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                                    <MessageSquare size={40} className="text-muted-foreground/40" />
-                                </div>
-                                <h4 className="text-xl font-bold mb-2">No active questions</h4>
-                                <p className="text-muted-foreground max-w-md mx-auto px-4">
-                                    Shared predictions and polls will appear here. Create one and share it with this group!
-                                </p>
-                                <Button
-                                    className="mt-8 rounded-full px-8"
-                                    variant="outline"
-                                    onClick={() => navigate('/create')}
+                        <AnimatePresence mode="wait">
+                            {questions.length > 0 ? (
+                                <motion.div 
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="grid grid-cols-1 md:grid-cols-2 gap-5"
                                 >
-                                    Create New Question
-                                </Button>
-                            </div>
-                        )}
-                    </TabsContent>
-
-                    <TabsContent value="members" className="mt-0 focus:outline-none">
-                        {group.members && group.members.length > 0 ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {group.members.map((member) => (
-                                    <motion.div
-                                        key={member.id}
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        className="flex items-center gap-4 p-4 rounded-2xl bg-muted border border-border hover:border-primary/20 transition-all shadow-md group"
-                                    >
-                                        <Avatar className="w-12 h-12 border-2 border-border group-hover:border-primary/20 transition-all">
-                                            <AvatarImage src={member.avatar || undefined} alt={member.username} />
-                                            <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                                                {member.name?.[0] || member.username?.[0]}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-sm truncate group-hover:text-primary transition-colors">
-                                                {member.name || member.username}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground truncate font-medium">@{member.username}</p>
-                                        </div>
-                                        {group.isOwner && member.id !== group.id && (
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => handleRemoveMember(member.id)}
-                                                className="h-8 w-8 text-muted-foreground hover:text-red-500 rounded-full"
+                                    {questions.map((q, idx) => {
+                                        const pal = getPalette(idx);
+                                        return (
+                                            <motion.div
+                                                key={q.id}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: idx * 0.05 }}
+                                                onClick={() => navigate(q.module_type === 'prediction' ? `/prediction/${q.id}` : `/poll/${q.id}`)}
+                                                className="bg-white rounded-3xl p-6 border border-slate-100 hover:shadow-xl hover:shadow-violet-500/5 transition-all group cursor-pointer relative overflow-hidden"
+                                                style={{
+                                                    borderLeft: `4px solid ${pal.border}`,
+                                                    background: `linear-gradient(to right, ${pal.bg}, transparent)`
+                                                }}
                                             >
-                                                <X size={16} />
-                                            </Button>
-                                        )}
-                                    </motion.div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="py-20 text-center">
-                                <p className="text-muted-foreground">No members found</p>
-                            </div>
-                        )}
+                                                <div className="flex items-start justify-between gap-4 mb-5">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${pal.border}20`, color: pal.border }}>
+                                                            {q.module_type === 'prediction' ? <Gavel size={18} /> : <BarChart3 size={18} />}
+                                                        </div>
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                            {q.field.fields}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100">
+                                                        <Clock size={12} className="text-violet-400" />
+                                                        Ends {new Date(q.end_date).toLocaleDateString()}
+                                                    </div>
+                                                </div>
+
+                                                <h4 className="font-bold text-lg mb-4 leading-tight text-slate-800 group-hover:text-[#a855f7] transition-colors line-clamp-2 min-h-[3rem]">
+                                                    {q.text}
+                                                </h4>
+
+                                                <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100">
+                                                    <div className="flex items-center gap-2">
+                                                        <Avatar className="w-8 h-8 border-2 border-white shadow-sm">
+                                                            <AvatarImage src={q.user.avatar || undefined} />
+                                                            <AvatarFallback className="text-[10px] font-black bg-violet-50 text-[#a855f7]">
+                                                                {q.user.username[0].toUpperCase()}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[11px] font-black text-slate-800 leading-none">@{q.user.username}</span>
+                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Creator</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="text-[9px] font-black uppercase tracking-tight text-slate-500 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                                                            {q.module_type === 'prediction' ? (
+                                                                `${(q.yes_count || 0) + (q.no_count || 0)} Preds`
+                                                            ) : (
+                                                                `${q.answers_count || 0} Votes`
+                                                            )}
+                                                        </div>
+                                                        <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-[#a855f7] group-hover:text-white transition-all shadow-sm">
+                                                            <ChevronRight size={16} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })}
+                                </motion.div>
+                            ) : (
+                                <motion.div 
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="py-24 text-center bg-white rounded-[2.5rem] border border-dashed border-slate-200 shadow-sm"
+                                >
+                                    <div className="w-24 h-24 bg-violet-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                        <MessageSquare size={44} className="text-violet-400" />
+                                    </div>
+                                    <h4 className="text-2xl font-black text-slate-800 mb-2">No questions yet</h4>
+                                    <p className="text-slate-500 max-w-sm mx-auto px-4 font-medium mb-10">
+                                        This group doesn't have any active predictions or polls yet.
+                                    </p>
+                                    <Button
+                                        className="rounded-2xl h-14 px-10 bg-violet-600 shadow-xl shadow-violet-200 font-bold hover:scale-[1.05] transition-transform"
+                                        onClick={() => navigate('/create')}
+                                    >
+                                        Create New Question
+                                    </Button>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </TabsContent>
 
-                    <TabsContent value="requests" className="mt-0 focus:outline-none">
-                        {joinRequests.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {joinRequests.map((req) => (
-                                    <motion.div
-                                        key={req.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="flex items-center justify-between p-4 rounded-2xl bg-muted border border-border shadow-md"
-                                    >
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <Avatar className="w-10 h-10 border border-border">
-                                                <AvatarImage src={req.user.avatar || undefined} />
-                                                <AvatarFallback className="bg-primary/10 text-primary">
-                                                    {req.user.username[0].toUpperCase()}
+                    {/* Members Tab Content */}
+                    <TabsContent value="members" className="mt-0 focus:outline-none">
+                        <AnimatePresence mode="wait">
+                            {group.members && group.members.length > 0 ? (
+                                <motion.div 
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+                                >
+                                    {group.members.map((member, idx) => (
+                                        <motion.div
+                                            key={member.id}
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ delay: idx * 0.03 }}
+                                            className="flex items-center gap-4 p-4 rounded-3xl bg-white border border-slate-100 hover:border-violet-200 hover:shadow-lg hover:shadow-violet-500/5 transition-all group"
+                                        >
+                                            <Avatar className="w-14 h-14 border-4 border-slate-50 group-hover:border-violet-100 transition-all shadow-sm">
+                                                <AvatarImage src={member.avatar || undefined} alt={member.username} />
+                                                <AvatarFallback className="bg-violet-50 text-violet-600 font-black text-lg">
+                                                    {member.name?.[0] || member.username?.[0]}
                                                 </AvatarFallback>
                                             </Avatar>
-                                            <div className="min-w-0">
-                                                <p className="font-bold text-sm truncate">@{req.user.username}</p>
-                                                <p className="text-[10px] text-muted-foreground">Requested {new Date(req.created_at).toLocaleDateString()}</p>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-black text-slate-800 truncate group-hover:text-violet-600 transition-colors">
+                                                    {member.name || member.username}
+                                                </p>
+                                                <p className="text-xs text-slate-400 font-bold">@{member.username}</p>
                                             </div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => handleJoinRequest(req.id, 'accept')}
-                                                className="h-8 bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20 rounded-full text-xs font-bold px-4"
-                                            >
-                                                Accept
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => handleJoinRequest(req.id, 'reject')}
-                                                className="h-8 text-red-500 hover:bg-red-500/10 rounded-full text-xs font-bold px-4"
-                                            >
-                                                Reject
-                                            </Button>
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="py-20 text-center bg-muted/30 rounded-3xl border border-dashed border-border">
-                                <div className="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <UserPlus size={32} className="text-muted-foreground/30" />
+                                            {group.isOwner && member.id !== group.id && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleRemoveMember(member.id)}
+                                                    className="h-9 w-9 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                                >
+                                                    <X size={18} />
+                                                </Button>
+                                            )}
+                                        </motion.div>
+                                    ))}
+                                </motion.div>
+                            ) : (
+                                <div className="py-24 text-center bg-white rounded-[2.5rem] border border-dashed border-slate-200">
+                                    <AlertCircle size={48} className="mx-auto text-slate-300 mb-4" />
+                                    <p className="text-slate-500 font-bold">No members found</p>
                                 </div>
-                                <h4 className="font-bold text-lg mb-1">No pending requests</h4>
-                                <p className="text-muted-foreground text-sm">When users request to join your private group, they'll appear here.</p>
-                            </div>
-                        )}
+                            )}
+                        </AnimatePresence>
+                    </TabsContent>
+
+                    {/* Join Requests Tab Content */}
+                    <TabsContent value="requests" className="mt-0 focus:outline-none">
+                        <AnimatePresence mode="wait">
+                            {(Array.isArray(joinRequests) ? joinRequests : (joinRequests as any)?.data || []).length > 0 ? (
+                                <motion.div 
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="grid grid-cols-1 md:grid-cols-2 gap-3"
+                                >
+                                    {(Array.isArray(joinRequests) ? joinRequests : (joinRequests as any)?.data || []).map((req: any, idx: number) => (
+                                        <motion.div
+                                            key={req.id}
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: idx * 0.05 }}
+                                            className="flex items-center justify-between p-4 rounded-3xl bg-white border border-slate-100 shadow-sm"
+                                        >
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <Avatar className="w-10 h-10 border-2 border-violet-50">
+                                                    <AvatarImage src={req.user.avatar || undefined} />
+                                                    <AvatarFallback className="bg-violet-100 text-[#a855f7] font-black text-sm">
+                                                        {req.user.username[0].toUpperCase()}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="min-w-0">
+                                                    <p className="font-black text-slate-800 truncate text-sm">@{req.user.username}</p>
+                                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Requested {new Date(req.created_at).toLocaleDateString()}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => handleJoinRequest(req.id, 'accept')}
+                                                    className="h-9 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[10px] font-black px-4 shadow-lg shadow-emerald-200"
+                                                >
+                                                    Accept
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => handleJoinRequest(req.id, 'reject')}
+                                                    className="h-9 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl text-[10px] font-bold px-3"
+                                                >
+                                                    Reject
+                                                </Button>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </motion.div>
+                            ) : (
+                                <div className="py-24 text-center bg-white rounded-[2.5rem] border border-dashed border-slate-200 shadow-sm">
+                                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                        <UserPlus size={36} className="text-slate-300" />
+                                    </div>
+                                    <h4 className="text-xl font-black text-slate-800 mb-1">No pending requests</h4>
+                                    <p className="text-slate-400 text-sm font-medium">When users request to join, they'll appear here.</p>
+                                </div>
+                            )}
+                        </AnimatePresence>
                     </TabsContent>
                 </Tabs>
             </div>
+
+
+
+
+<AnimatePresence>
+  {removeMemberOpen && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      onClick={() => setRemoveMemberOpen(false)}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0, y: 30 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 30 }}
+        className="glass-card rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl border border-border"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-black text-foreground">
+            Remove Member
+          </h2>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+            onClick={() => setRemoveMemberOpen(false)}
+          >
+            <X size={20} />
+          </Button>
+        </div>
+
+        <p className="text-muted-foreground text-sm md:text-base mb-8">
+          Are you sure you want to remove this member from the group?
+        </p>
+
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            className="flex-1 h-11 rounded-xl"
+            onClick={() => setRemoveMemberOpen(false)}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            onClick={confirmRemoveMember}
+            className="flex-1 h-11 rounded-xl font-bold"
+            style={{
+              background:
+                'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+            }}
+          >
+            Remove
+          </Button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
+
+
 
             <MobileNav />
         </div>

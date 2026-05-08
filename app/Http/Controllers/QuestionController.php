@@ -85,6 +85,13 @@ public function questionsByUserId()
 
         $question = Question::create($validated);
 
+        // Notify followers
+        $user = Auth::user();
+        $followers = $user->followers;
+        foreach ($followers as $follower) {
+            $follower->notify(new \App\Notifications\NewPredictionNotification($question, $user));
+        }
+
         return response()->json($question, 201);
     }
 
@@ -139,7 +146,6 @@ public function questionsByUserId()
     public function publicIndex()
     {
         $questions = Question::where('visibility', 'public')
-            ->where('module_type', 'question')
             ->with(['field', 'answerType', 'user', 'answers'])
             ->withCount('answers')
             ->latest()

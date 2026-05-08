@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Group;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
@@ -50,44 +51,55 @@ class GroupController extends Controller
 
 
     public function index(Request $request)
-{
-    $userId = Auth::id();
-    $query = Group::withCount('members');
+    {
+        $userId = Auth::id();
+        $query = Group::withCount('members');
 
-    // Always exclude blocked groups (important!)
-    $query->where('is_blocked', false);
+        // Always exclude blocked groups (important!)
+        $query->where('is_blocked', false);
 
-    // Check if the current user is a member (for isMember flag)
-    $query->withExists(['members as is_member' => function ($q) use ($userId) {
-        $q->where('user_id', $userId);
-    }]);
+        // Check if the current user is a member (for isMember flag)
+        $query->withExists([
+            'members as is_member' => function ($q) use ($userId) {
+                $q->where('user_id', $userId);
+            }
+        ]);
 
-    if ($request->has('my_groups')) {
-        // My Groups: show only groups the user has joined (blocked ones already excluded above)
-        $query->whereHas('members', function ($q) use ($userId) {
-            $q->where('user_id', $userId);
-        });
-    } else if ($userId) {
-        // Discover mode: hide already joined groups + exclude blocked
-        $query->whereDoesntHave('members', function ($q) use ($userId) {
-            $q->where('user_id', $userId);
-        });
+        if ($request->has('my_groups')) {
+            // My Groups: show only groups the user has joined (blocked ones already excluded above)
+            $query->whereHas('members', function ($q) use ($userId) {
+                $q->where('user_id', $userId);
+            });
+        } else if ($userId) {
+            // Discover mode: hide already joined groups + exclude blocked
+            $query->whereDoesntHave('members', function ($q) use ($userId) {
+                $q->where('user_id', $userId);
+            });
+        }
+
+        $groups = $query->get();
+
+        return response()->json($groups->map(function ($group) use ($userId) {
+            $pendingRequest = false;
+            if (!$group->is_member && $userId) {
+                $pendingRequest = GroupJoinRequest::where('group_id', $group->id)
+                    ->where('user_id', $userId)
+                    ->where('status', 'pending')
+                    ->exists();
+            }
+
+            return [
+                'id' => $group->id,
+                'name' => $group->name,
+                'description' => $group->description,
+                'memberCount' => $group->members_count,
+                'isPrivate' => (bool) $group->is_private,
+                'isMember' => (bool) $group->is_member,
+                'pendingRequest' => $pendingRequest,
+                'createdAt' => $group->created_at->toISOString(),
+            ];
+        }));
     }
-
-    $groups = $query->get();
-
-    return response()->json($groups->map(function ($group) {
-        return [
-            'id'            => $group->id,
-            'name'          => $group->name,
-            'description'   => $group->description,
-            'memberCount'   => $group->members_count,
-            'isPrivate'     => (bool) $group->is_private,
-            'isMember'      => (bool) $group->is_member,
-            'createdAt'     => $group->created_at->toISOString(),
-        ];
-    }));
-}
 
 
     public function show($id)
@@ -116,7 +128,7 @@ class GroupController extends Controller
             'name' => $group->name,
             'description' => $group->description,
             'memberCount' => $group->members_count,
-            'isPrivate' => (bool)$group->is_private,
+            'isPrivate' => (bool) $group->is_private,
             'isMember' => $isMember,
             'isOwner' => $isOwner,
             'pendingRequest' => $pendingRequest ? true : false,
@@ -146,7 +158,7 @@ class GroupController extends Controller
             'name' => $group->name,
             'description' => $group->description,
             'memberCount' => 1,
-            'isPrivate' => (bool)$group->is_private,
+            'isPrivate' => (bool) $group->is_private,
             'createdAt' => $group->created_at->toISOString(),
         ], 201);
     }
@@ -193,7 +205,7 @@ class GroupController extends Controller
             $existing = GroupJoinRequest::where('group_id', $group->id)
                 ->where('user_id', $userId)
                 ->first();
-            
+
             if ($existing) {
                 if ($existing->status === 'pending') {
                     return response()->json(['message' => 'Join request already pending'], 400);
@@ -238,8 +250,13 @@ class GroupController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $joinRequest = GroupJoinRequest::where('group_id', $group->id)->findOrFail($requestId);
-        
+        // Support both request ID (from group screen) and user ID (from notifications)
+        $joinRequest = GroupJoinRequest::where('group_id', $group->id)
+            ->where(function ($query) use ($requestId) {
+                $query->where('id', $requestId)
+                      ->orWhere('user_id', $requestId);
+            })->firstOrFail();
+
         $validated = $request->validate([
             'action' => 'required|in:accept,reject'
         ]);
@@ -293,19 +310,19 @@ class GroupController extends Controller
         return response()->json(['message' => 'Member removed successfully']);
     }
 
-    
-public function leave(Request $request, Group $group)
-{
-    $userId = Auth::id();
 
-    if (!$group->members()->where('user_id', $userId)->exists()) {
-        return response()->json(['message' => 'You are not a member of this group'], 400);
+    public function leave(Request $request, Group $group)
+    {
+        $userId = Auth::id();
+
+        if (!$group->members()->where('user_id', $userId)->exists()) {
+            return response()->json(['message' => 'You are not a member of this group'], 400);
+        }
+
+        $group->members()->detach($userId);
+
+        return response()->json(['message' => 'Successfully left the group']);
     }
-
-    $group->members()->detach($userId);
-
-    return response()->json(['message' => 'Successfully left the group']);
-}
 
     public function questions(Group $group)
     {
@@ -319,14 +336,14 @@ public function leave(Request $request, Group $group)
         $questions = $group->questions()
             ->with(['field', 'user', 'answerType'])
             ->withCount([
-            'answers',
-            'answers as yes_count' => function ($query) {
-            $query->where('answer', 'Yes');
-        },
-            'answers as no_count' => function ($query) {
-            $query->where('answer', 'No');
-        }
-        ])
+                'answers',
+                'answers as yes_count' => function ($query) {
+                    $query->where('answer', 'Yes');
+                },
+                'answers as no_count' => function ($query) {
+                    $query->where('answer', 'No');
+                }
+            ])
             ->latest()
             ->get();
 

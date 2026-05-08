@@ -579,32 +579,59 @@ export function HomeScreen() {
               "
             >
               {categories.map((cat) => (
+                // <TabsTrigger
+                //   key={cat.value}
+                //   value={cat.value}
+                //   className="
+                //     flex-shrink-0 flex items-center gap-1.5
+                //     rounded-full
+                //     h-9 px-4
+                //     /* ── KEY: 15px matches FB/IG label size exactly ── */
+                //     text-[15px] font-semibold leading-none
+                //     whitespace-nowrap tracking-[-0.01em]
+                //     transition-all duration-200
+
+                //     /* unselected pill */
+                //     bg-muted text-muted-foreground
+                //     border border-border/50
+
+                //     /* selected pill — solid fill like IG active filter */
+                //     data-[state=active]:bg-primary
+                //     data-[state=active]:text-primary-foreground
+                //     data-[state=active]:border-primary
+                //     data-[state=active]:shadow-sm
+
+                //     /* remove default radix ring */
+                //     ring-0 focus-visible:ring-0 focus-visible:outline-none
+                //   "
+                // >
+
+
                 <TabsTrigger
-                  key={cat.value}
-                  value={cat.value}
-                  className="
-                    flex-shrink-0 flex items-center gap-1.5
-                    rounded-full
-                    h-9 px-4
-                    /* ── KEY: 15px matches FB/IG label size exactly ── */
-                    text-[15px] font-semibold leading-none
-                    whitespace-nowrap tracking-[-0.01em]
-                    transition-all duration-200
+  key={cat.value}
+  value={cat.value}
+  className="
+    flex-shrink-0 whitespace-nowrap
+    px-3.5 py-1.5 rounded-full
+    text-xs font-bold
+    transition-all border
 
-                    /* unselected pill */
-                    bg-muted text-muted-foreground
-                    border border-border/50
+    bg-white dark:bg-white/5
+    border-gray-200 dark:border-white/10
+    text-gray-600 dark:text-gray-400
 
-                    /* selected pill — solid fill like IG active filter */
-                    data-[state=active]:bg-primary
-                    data-[state=active]:text-primary-foreground
-                    data-[state=active]:border-primary
-                    data-[state=active]:shadow-sm
+    hover:border-[#a855f7]/40
 
-                    /* remove default radix ring */
-                    ring-0 focus-visible:ring-0 focus-visible:outline-none
-                  "
-                >
+    data-[state=active]:bg-[#a855f7]
+    data-[state=active]:text-white
+    data-[state=active]:border-[#a855f7]
+    data-[state=active]:shadow-md
+    data-[state=active]:shadow-[#a855f7]/20
+
+    ring-0 focus-visible:ring-0 focus-visible:outline-none
+  "
+>
+
                   {cat.value === 'trending' && (
                     <Flame
                       size={14}
@@ -627,21 +654,47 @@ export function HomeScreen() {
               "
             >
               {categories.map((cat) => (
-                <TabsTrigger
-                  key={cat.value}
-                  value={cat.value}
-                  className="
-                    rounded-xl h-full px-5
-                    text-sm font-semibold
-                    whitespace-nowrap
-                    text-muted-foreground
-                    transition-all duration-200
-                    data-[state=active]:bg-background
-                    data-[state=active]:text-foreground
-                    data-[state=active]:shadow-sm
-                    ring-0 focus-visible:ring-0
-                  "
-                >
+                // <TabsTrigger
+                //   key={cat.value}
+                //   value={cat.value}
+                //   className="
+                //     rounded-xl h-full px-5
+                //     text-sm font-semibold
+                //     whitespace-nowrap
+                //     text-muted-foreground
+                //     transition-all duration-200
+                //     data-[state=active]:bg-background
+                //     data-[state=active]:text-foreground
+                //     data-[state=active]:shadow-sm
+                //     ring-0 focus-visible:ring-0
+                //   "
+                // >
+
+<TabsTrigger
+  key={cat.value}
+  value={cat.value}
+  className="
+    flex-shrink-0 whitespace-nowrap
+    px-3.5 py-1.5 rounded-full
+    text-xs font-bold
+    transition-all border
+
+    bg-white dark:bg-white/5
+    border-gray-200 dark:border-white/10
+    text-gray-600 dark:text-gray-400
+
+    hover:border-[#a855f7]/40
+
+    data-[state=active]:bg-[#a855f7]
+    data-[state=active]:text-white
+    data-[state=active]:border-[#a855f7]
+    data-[state=active]:shadow-md
+    data-[state=active]:shadow-[#a855f7]/20
+
+    ring-0 focus-visible:ring-0 focus-visible:outline-none
+  "
+>
+
                   {cat.value === 'trending' && (
                     <Flame size={13} className="inline mr-1.5 mb-px text-orange-500" />
                   )}
@@ -829,3 +882,511 @@ export function HomeScreen() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+// import { useState, useEffect } from 'react';
+// import { Tabs, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
+// import { PredictionCard } from '@/app/components/PredictionCard';
+// import { MobileNav } from '@/app/components/MobileNav';
+// import { TopNav } from '@/app/components/TopNav';
+// import { Plus, TrendingUp, Flame, Sparkles } from 'lucide-react';
+// import { useNavigate } from 'react-router-dom';
+// import { motion, AnimatePresence } from 'motion/react';
+// import { toast } from 'sonner';
+// import { getAuth } from '@/util/api';
+// import { useAppSelector } from '@/app/store/hooks';
+
+// /*
+//   Mobile-only Roboto typography — injected once, scoped to [data-mobile-home].
+//   max-width: 768px guard ensures zero effect on desktop/tablet.
+// */
+// const mobileHomeStyles = `
+//   @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600&display=swap');
+
+//   @media (max-width: 768px) {
+//     [data-mobile-home] {
+//       font-family: 'Roboto', system-ui, sans-serif !important;
+//     }
+
+//     /* Mobile chip tabs — button text tier: 13px / 500 */
+//     [data-mobile-home] .mh-chip {
+//       font-size: 13px !important;
+//       font-weight: 500 !important;
+//       line-height: 1.3 !important;
+//     }
+
+//     /* Section titles ("Top Predictions", "Latest Forecasts") — primary text tier: 15px / 600 */
+//     [data-mobile-home] .mh-section-title {
+//       font-size: 15px !important;
+//       font-weight: 600 !important;
+//       line-height: 1.3 !important;
+//     }
+
+//     /* "HOT" badge — small text tier: 11px / 700 */
+//     [data-mobile-home] .mh-hot-badge {
+//       font-size: 11px !important;
+//       font-weight: 700 !important;
+//       line-height: 1.3 !important;
+//     }
+
+//     /* Forecast count chip ("12") — subtext tier: 12px / 400 */
+//     [data-mobile-home] .mh-count-chip {
+//       font-size: 12px !important;
+//       font-weight: 400 !important;
+//       line-height: 1.3 !important;
+//     }
+
+//     /* Rank badge number — small text tier: 11px / 900 */
+//     [data-mobile-home] .mh-rank-badge {
+//       font-size: 11px !important;
+//       font-weight: 900 !important;
+//       line-height: 1 !important;
+//     }
+
+//     /* Error message — body tier: 14px / 600 */
+//     [data-mobile-home] .mh-error-msg {
+//       font-size: 14px !important;
+//       font-weight: 600 !important;
+//       line-height: 1.35 !important;
+//     }
+
+//     /* Try Again button — button text tier: 13px / 500 */
+//     [data-mobile-home] .mh-retry-btn {
+//       font-size: 13px !important;
+//       font-weight: 500 !important;
+//       line-height: 1.3 !important;
+//     }
+
+//     /* Empty state primary — body tier: 14px / 600 */
+//     [data-mobile-home] .mh-empty-primary {
+//       font-size: 14px !important;
+//       font-weight: 600 !important;
+//       line-height: 1.35 !important;
+//     }
+
+//     /* Empty state secondary — subtext tier: 13px / 400 */
+//     [data-mobile-home] .mh-empty-secondary {
+//       font-size: 13px !important;
+//       font-weight: 400 !important;
+//       line-height: 1.35 !important;
+//     }
+//   }
+// `;
+
+// let homeStylesInjected = false;
+
+// function injectMobileHomeStyles() {
+//   if (homeStylesInjected || typeof document === 'undefined') return;
+//   const style = document.createElement('style');
+//   style.textContent = mobileHomeStyles;
+//   document.head.appendChild(style);
+//   homeStylesInjected = true;
+// }
+
+// const defaultCategories = [
+//   { value: 'trending', label: 'Trending' },
+// ];
+
+// export function HomeScreen() {
+//   injectMobileHomeStyles();
+
+//   const navigate = useNavigate();
+//   const isGuest = useAppSelector((state) => state.auth.isGuest);
+//   const [categories, setCategories] = useState<{ value: string, label: string }[]>(defaultCategories);
+//   const [selectedCategory, setSelectedCategory] = useState('trending');
+//   const [searchQuery, setSearchQuery] = useState('');
+//   const [predictions, setPredictions] = useState<any[]>([]);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState<string | null>(null);
+
+//   useEffect(() => {
+//     const fetchFields = async () => {
+//       try {
+//         const data = await getAuth('/api/fields');
+//         const items = Array.isArray(data) ? data : data.data ?? [];
+//         const dynamicCats = items.map((f: any) => ({
+//           value: f.fields.toLowerCase(),
+//           label: f.fields,
+//         }));
+//         setCategories([...defaultCategories, ...dynamicCats]);
+//       } catch (err) {
+//         console.error('Failed to fetch categories:', err);
+//       }
+//     };
+//     fetchFields();
+//   }, []);
+
+//   useEffect(() => {
+//     const fetchPredictions = async () => {
+//       try {
+//         setLoading(true);
+//         setError(null);
+//         const rawData = await getAuth('/api/predictions');
+//         const items = Array.isArray(rawData) ? rawData : rawData.data ?? [];
+//         setPredictions(items);
+//       } catch (err: any) {
+//         console.error('HomeScreen fetch failed:', err);
+//         setError(err.message || 'Failed to load predictions');
+//         toast.error('Could not load predictions');
+//       } finally {
+//         setLoading(false);
+//       }
+//     };
+//     fetchPredictions();
+//   }, []);
+
+//   const topPredictions = selectedCategory === 'trending'
+//     ? [...predictions]
+//         .sort((a, b) => (b.answers_count || 0) - (a.answers_count || 0))
+//         .slice(0, 3)
+//     : [];
+
+//   const topIds = new Set(topPredictions.map((p) => p.id));
+
+//   const filteredPredictions = predictions.filter((pred) => {
+//     const categoryMatch =
+//       selectedCategory === 'trending' ||
+//       pred?.field?.fields?.toLowerCase() === selectedCategory.toLowerCase();
+//     const searchMatch = pred?.questions
+//       ?.toLowerCase()
+//       .includes(searchQuery.toLowerCase());
+//     return categoryMatch && (searchMatch ?? true);
+//   });
+
+//   const latestPredictions = filteredPredictions.filter((p) => !topIds.has(p.id));
+
+//   return (
+//     <div data-mobile-home className="min-h-screen bg-background">
+//       <TopNav
+//         showSearch={true}
+//         onSearchChange={setSearchQuery}
+//         searchQuery={searchQuery}
+//         categories={categories}
+//         predictions={predictions}
+//         onCategorySelect={setSelectedCategory}
+//       />
+
+//       <div className="max-w-7xl mx-auto px-3 py-3 pb-24 md:px-6 md:py-6 md:pb-8">
+
+//         {/* ═══════════════════════════════════════════════
+//             FILTER TABS
+//             Mobile  → Instagram Stories chip style
+//                       13px/500 Roboto, pill shape, scrollable
+//             Desktop → clean tab bar, 14px semibold (unchanged)
+//         ═══════════════════════════════════════════════ */}
+//         <div className="mb-5 md:mb-8">
+//           <Tabs value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as string)}>
+
+//             {/* ── MOBILE chip strip ── */}
+//             <TabsList
+//               className="
+//                 md:hidden
+//                 w-full h-auto p-0 pb-0.5
+//                 bg-transparent border-0 shadow-none
+//                 flex gap-2 overflow-x-auto scrollbar-hide
+//                 justify-start items-center
+//               "
+//             >
+//               {categories.map((cat) => (
+//                 // <TabsTrigger
+//                 //   key={cat.value}
+//                 //   value={cat.value}
+//                 //   className="
+//                 //     mh-chip
+//                 //     flex-shrink-0 flex items-center gap-1.5
+//                 //     rounded-full
+//                 //     h-9 px-4
+//                 //     whitespace-nowrap tracking-[-0.01em]
+//                 //     transition-all duration-200
+
+//                 //     bg-muted text-muted-foreground
+//                 //     border border-border/50
+
+//                 //     data-[state=active]:bg-primary
+//                 //     data-[state=active]:text-primary-foreground
+//                 //     data-[state=active]:border-primary
+//                 //     data-[state=active]:shadow-sm
+
+//                 //     ring-0 focus-visible:ring-0 focus-visible:outline-none
+//                 //   "
+//                 // >
+
+// <TabsTrigger
+//   key={cat.value}
+//   value={cat.value}
+//   className="
+//     flex-shrink-0 whitespace-nowrap
+//     px-3.5 py-1.5 rounded-full
+//     text-xs font-bold
+//     transition-all border
+
+//     bg-white dark:bg-white/5
+//     border-gray-200 dark:border-white/10
+//     text-gray-600 dark:text-gray-400
+
+//     hover:border-[#a855f7]/40
+
+//     data-[state=active]:bg-[#a855f7]
+//     data-[state=active]:text-white
+//     data-[state=active]:border-[#a855f7]
+//     data-[state=active]:shadow-md
+//     data-[state=active]:shadow-[#a855f7]/20
+
+//     ring-0 focus-visible:ring-0 focus-visible:outline-none
+//   "
+// >
+
+//                   {cat.value === 'trending' && (
+//                     <Flame
+//                       size={14}
+//                       className="data-[state=active]:text-primary-foreground"
+//                     />
+//                   )}
+//                   {cat.label}
+//                 </TabsTrigger>
+//               ))}
+//             </TabsList>
+
+//             {/* ── DESKTOP tab bar — untouched ── */}
+//             <TabsList
+//               className="
+//                 hidden md:flex
+//                 w-full h-12 p-1
+//                 bg-muted/40 border border-border/30
+//                 rounded-2xl gap-1
+//                 overflow-x-auto scrollbar-hide
+//               "
+//             >
+//               {categories.map((cat) => (
+//                 // <TabsTrigger
+//                 //   key={cat.value}
+//                 //   value={cat.value}
+//                 //   className="
+//                 //     rounded-xl h-full px-5
+//                 //     text-sm font-semibold
+//                 //     whitespace-nowrap
+//                 //     text-muted-foreground
+//                 //     transition-all duration-200
+//                 //     data-[state=active]:bg-background
+//                 //     data-[state=active]:text-foreground
+//                 //     data-[state=active]:shadow-sm
+//                 //     ring-0 focus-visible:ring-0
+//                 //   "
+//                 // >
+
+// <TabsTrigger
+//   key={cat.value}
+//   value={cat.value}
+//   className="
+//     flex-shrink-0 whitespace-nowrap
+//     px-3.5 py-1.5 rounded-full
+//     text-xs font-bold
+//     transition-all border
+
+//     bg-white dark:bg-white/5
+//     border-gray-200 dark:border-white/10
+//     text-gray-600 dark:text-gray-400
+
+//     hover:border-[#a855f7]/40
+
+//     data-[state=active]:bg-[#a855f7]
+//     data-[state=active]:text-white
+//     data-[state=active]:border-[#a855f7]
+//     data-[state=active]:shadow-md
+//     data-[state=active]:shadow-[#a855f7]/20
+
+//     ring-0 focus-visible:ring-0 focus-visible:outline-none
+//   "
+// >
+
+//                   {cat.value === 'trending' && (
+//                     <Flame size={13} className="inline mr-1.5 mb-px text-orange-500" />
+//                   )}
+//                   {cat.label}
+//                 </TabsTrigger>
+//               ))}
+//             </TabsList>
+
+//           </Tabs>
+//         </div>
+
+//         {/* ── CONTENT ── */}
+//         <AnimatePresence mode="wait">
+
+//           {/* Loading skeletons */}
+//           {loading && (
+//             <motion.div
+//               key="loading"
+//               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+//               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6"
+//             >
+//               {[...Array(6)].map((_, i) => (
+//                 <div
+//                   key={i}
+//                   className="h-36 rounded-2xl bg-muted/50 animate-pulse"
+//                   style={{ animationDelay: `${i * 60}ms` }}
+//                 />
+//               ))}
+//             </motion.div>
+//           )}
+
+//           {/* Error */}
+//           {!loading && error && (
+//             <motion.div
+//               key="error"
+//               initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+//               className="flex flex-col items-center py-16 gap-3"
+//             >
+//               <p className="mh-error-msg text-[16px] font-semibold text-destructive text-center px-4">
+//                 {error}
+//               </p>
+//               <button
+//                 onClick={() => window.location.reload()}
+//                 className="mh-retry-btn mt-1 px-5 py-2.5 text-[15px] font-semibold bg-primary text-primary-foreground rounded-full shadow"
+//               >
+//                 Try Again
+//               </button>
+//             </motion.div>
+//           )}
+
+//           {/* Main feed */}
+//           {!loading && !error && (
+//             <motion.div
+//               key="content"
+//               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+//               className="space-y-6 md:space-y-12"
+//             >
+
+//               {/* ── TOP PREDICTIONS section ── */}
+//               {topPredictions.length > 0 && (
+//                 <section className="space-y-3 md:space-y-5">
+
+//                   <div className="flex items-center gap-2 px-0.5">
+//                     <TrendingUp size={18} className="text-primary flex-shrink-0" />
+//                     <h2 className="mh-section-title text-[17px] md:text-xl font-bold text-foreground leading-snug">
+//                       Top Predictions
+//                     </h2>
+//                     <span className="
+//                       mh-hot-badge
+//                       inline-flex items-center gap-1
+//                       bg-orange-500/12 text-orange-600
+//                       dark:bg-orange-400/15 dark:text-orange-400
+//                       text-[12px] font-bold
+//                       px-2 py-0.5 rounded-full
+//                       border border-orange-400/25
+//                     ">
+//                       <Flame size={10} fill="currentColor" /> HOT
+//                     </span>
+//                   </div>
+
+//                   <div className="flex flex-col gap-2.5 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6">
+//                     {topPredictions.map((prediction, index) => (
+//                       <motion.div
+//                         key={`top-${prediction.id}`}
+//                         initial={{ opacity: 0, y: 10 }}
+//                         animate={{ opacity: 1, y: 0 }}
+//                         transition={{ delay: index * 0.08, type: 'spring', stiffness: 300, damping: 24 }}
+//                         className="relative w-full"
+//                       >
+//                         {/* Rank badge */}
+//                         <div className="
+//                           mh-rank-badge
+//                           absolute -top-1.5 -right-1.5 z-10
+//                           w-6 h-6 rounded-full flex items-center justify-center
+//                           bg-gradient-to-br from-amber-400 to-orange-500
+//                           text-white text-[11px] font-black
+//                           shadow-md border-2 border-background
+//                         ">
+//                           {index + 1}
+//                         </div>
+//                         <PredictionCard prediction={prediction} />
+//                       </motion.div>
+//                     ))}
+//                   </div>
+
+//                   <div className="h-px bg-border/40 w-full" />
+//                 </section>
+//               )}
+
+//               {/* ── LATEST FORECASTS section ── */}
+//               <section className="space-y-3 md:space-y-5">
+
+//                 <div className="flex items-center gap-2 px-0.5">
+//                   <Sparkles size={18} className="text-primary flex-shrink-0" />
+//                   <h2 className="mh-section-title text-[17px] md:text-xl font-bold text-foreground leading-snug">
+//                     Latest Forecasts
+//                   </h2>
+//                   {latestPredictions.length > 0 && (
+//                     <span className="mh-count-chip text-[13px] font-medium text-muted-foreground">
+//                       {latestPredictions.length}
+//                     </span>
+//                   )}
+//                 </div>
+
+//                 <motion.div
+//                   className="flex flex-col gap-2.5 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6"
+//                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+//                   transition={{ duration: 0.25 }}
+//                 >
+//                   {latestPredictions.map((prediction, index) => (
+//                     <motion.div
+//                       key={prediction.id}
+//                       initial={{ opacity: 0, y: 12 }}
+//                       animate={{ opacity: 1, y: 0 }}
+//                       transition={{ delay: index * 0.04, type: 'spring', stiffness: 280, damping: 22 }}
+//                       className="w-full"
+//                     >
+//                       <PredictionCard prediction={prediction} />
+//                     </motion.div>
+//                   ))}
+
+//                   {filteredPredictions.length === 0 && (
+//                     <div className="col-span-full flex flex-col items-center py-16 gap-2">
+//                       <p className="mh-empty-primary text-[16px] font-semibold text-foreground/70">
+//                         No predictions found
+//                       </p>
+//                       <p className="mh-empty-secondary text-[14px] text-muted-foreground text-center">
+//                         Try a different category or search term
+//                       </p>
+//                     </div>
+//                   )}
+//                 </motion.div>
+//               </section>
+
+//             </motion.div>
+//           )}
+//         </AnimatePresence>
+//       </div>
+
+//       {/* ── FAB — mobile only ── */}
+//       {!isGuest && (
+//         <motion.button
+//           initial={{ scale: 0, opacity: 0 }}
+//           animate={{ scale: 1, opacity: 1 }}
+//           transition={{ delay: 0.4, type: 'spring', stiffness: 300, damping: 20 }}
+//           whileHover={{ scale: 1.08 }}
+//           whileTap={{ scale: 0.92 }}
+//           onClick={() => navigate('/create')}
+//           className="md:hidden fixed bottom-20 right-4 w-12 h-12 rounded-full flex items-center justify-center shadow-2xl z-40"
+//           style={{
+//             background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
+//             boxShadow: '0 8px 20px rgba(168, 85, 247, 0.35)',
+//           }}
+//         >
+//           <Plus size={22} className="text-white" strokeWidth={2.5} />
+//         </motion.button>
+//       )}
+
+//       <MobileNav />
+//     </div>
+//   );
+// }

@@ -172,6 +172,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Leaderboard (auth required because of location filters)
     Route::get('/leaderboard', [\App\Http\Controllers\LeaderboardController::class, 'index']);
     Route::get('/leaderboard/my-standing', [\App\Http\Controllers\LeaderboardController::class, 'myStanding']);
+
+    // Follow system
+    Route::post('/users/{id}/follow', [\App\Http\Controllers\FollowController::class, 'toggleFollow']);
+    Route::get('/following/ids', [\App\Http\Controllers\FollowController::class, 'getFollowing']);
     
 });
 

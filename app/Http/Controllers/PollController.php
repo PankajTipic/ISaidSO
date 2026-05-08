@@ -67,6 +67,13 @@ class PollController extends Controller
 
         $poll = Question::create($validated);
 
+        // Notify followers
+        $user = Auth::user();
+        $followers = $user->followers;
+        foreach ($followers as $follower) {
+            $follower->notify(new \App\Notifications\NewPredictionNotification($poll, $user));
+        }
+
         // Attach to groups if group_ids are provided
         if ($request->has('group_ids')) {
             $groupIds = $request->get('group_ids', []);

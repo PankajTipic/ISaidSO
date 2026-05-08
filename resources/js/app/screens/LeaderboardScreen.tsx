@@ -452,21 +452,41 @@
 //         if (standingRes.data) setUserStanding(standingRes.data);
 //       } catch (err: any) {
 //         console.error('Leaderboard fetch error:', err);
-//         setError(err.message || 'Failed to load leaderboard');
-//         toast.error('Could not load leaderboard');
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
 //     fetchLeaderboard();
-//   }, [selectedTab, selectedCategory, period]);
+//     fetchUserStanding();
+//     fetchFollowingIds();
+//   }, [selectedTab, selectedCategory, period, sortBy, currentPage]);
+
+//   const fetchFollowingIds = async () => {
+//     if (!currentUserId) return;
+//     try {
+//       const res = await getAuth('/api/following/ids');
+//       const ids = res.following_ids || [];
+//       const map: Record<number, boolean> = {};
+//       ids.forEach((id: number) => {
+//         map[id] = true;
+//       });
+//       setFollowing(map);
+//     } catch (err) {
+//       console.error('Failed to fetch following IDs:', err);
+//     }
+//   };
+
+//   const toggleFollow = async (targetUserId: number) => {
+//     try {
+//       const isFollowing = !!following[targetUserId];
+//       await postAuth('/api/follow', { target_user_id: targetUserId, action: isFollowing ? 'unfollow' : 'follow' });
+//       setFollowing(prev => ({ ...prev, [targetUserId]: !isFollowing }));
+//     } catch (err) {
+//       toast.error('Failed to update follow status');
+//     }
+//   };
 
 //   const getRankMedal = (rank: number) => {
 //     if (rank === 1) return '🥇';
 //     if (rank === 2) return '🥈';
 //     if (rank === 3) return '🥉';
 //     return null;
-//   };
 
 //   const filteredList = [...leaderboardData]
 //     .filter((entry) =>
@@ -978,6 +998,7 @@
 
 
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
 import { MobileNav } from '@/app/components/MobileNav';
 import { TopNav } from '@/app/components/TopNav';
@@ -995,10 +1016,24 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { getAuth } from '@/util/api';
+import { getAuth, postAuth } from '@/util/api';
 import { useAppSelector } from '@/app/store/hooks';
 
+const cardPalettes = [
+  { border: '#a855f7', bg: 'rgba(168,85,247,0.06)' },
+  { border: '#ec4899', bg: 'rgba(236,72,153,0.06)' },
+  { border: '#06b6d4', bg: 'rgba(6,182,212,0.06)' },
+  { border: '#10b981', bg: 'rgba(16,185,129,0.06)' },
+  { border: '#f59e0b', bg: 'rgba(245,158,11,0.06)' },
+  { border: '#3b82f6', bg: 'rgba(59,130,246,0.06)' },
+];
+
+function getPalette(index: number) {
+  return cardPalettes[index % cardPalettes.length];
+}
+
 export function LeaderboardScreen() {
+  const navigate = useNavigate();
   const [selectedTab, setSelectedTab] = useState('global');
   const [selectedCategory, setSelectedCategory] = useState<string | number>('All');
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
@@ -1024,6 +1059,47 @@ export function LeaderboardScreen() {
 
   const currentUser = useAppSelector((state) => state.auth.user);
   const currentUserId = currentUser?.id;
+
+  const [expandedUserId, setExpandedUserId] = useState<number | null>(null);
+  const [following, setFollowing] = useState<Record<number, boolean>>({});
+  const [userPredictions, setUserPredictions] = useState<any[]>([]);
+  const [loadingUserPredictions, setLoadingUserPredictions] = useState(false);
+
+  const toggleExpand = async (userId: number) => {
+    if (expandedUserId === userId) {
+      setExpandedUserId(null);
+      return;
+    }
+    setExpandedUserId(userId);
+    setLoadingUserPredictions(true);
+    try {
+      const res = await getAuth('/api/public-questions');
+      const allQuestions = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+      setUserPredictions(allQuestions.filter((q: any) => q.user_id === userId));
+    } catch (err) {
+      console.error('Failed to load user predictions:', err);
+    } finally {
+      setLoadingUserPredictions(false);
+    }
+  };
+
+  const toggleFollow = async (userId: number, userName: string) => {
+    try {
+      const res = await postAuth(`/api/users/${userId}/follow`);
+      const isNowFollowing = res.following;
+      
+      setFollowing((prev) => ({ ...prev, [userId]: isNowFollowing }));
+      
+      if (isNowFollowing) {
+        toast.success(`Following ${userName}! You'll be notified for their next predictions.`);
+      } else {
+        toast.success(`Unfollowed ${userName}.`);
+      }
+    } catch (err) {
+      console.error('Failed to toggle follow:', err);
+      toast.error('Failed to update follow status');
+    }
+  };
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -1093,7 +1169,24 @@ export function LeaderboardScreen() {
         setLoading(false);
       }
     };
+
+    const fetchFollowingIds = async () => {
+      if (!currentUserId) return;
+      try {
+        const res = await getAuth('/api/following/ids');
+        const ids = res.following_ids || [];
+        const map: Record<number, boolean> = {};
+        ids.forEach((id: number) => {
+          map[id] = true;
+        });
+        setFollowing(map);
+      } catch (err) {
+        console.error('Failed to fetch following IDs:', err);
+      }
+    };
+
     fetchLeaderboard();
+    fetchFollowingIds();
   // FIX: Added `sortBy` was missing from deps — but sortBy is client-side only,
   // so we intentionally keep it out of the fetch effect. The fetch effect
   // correctly depends on tab, category, and period only.
@@ -1172,7 +1265,7 @@ export function LeaderboardScreen() {
         </div>
 
         {/* ── Tab + Controls Row ── */}
-        <div className="flex items-center gap-1.5 mb-2 w-full">
+        <div className="flex items-center gap-1.5 mb-2 w-full relative z-50">
 
           {/* Tab Switcher — search icon appended inside on mobile */}
           <div className="flex items-center gap-0.5 p-1 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-sm flex-shrink-0">
@@ -1461,19 +1554,26 @@ export function LeaderboardScreen() {
           {/* Quick Stats — Mobile */}
           <div className="md:hidden grid grid-cols-3 gap-2">
             {[
-              { label: 'Active Users', value: networkStats.totalActiveUsers.toLocaleString(), icon: <Users size={13} /> },
+              { label: 'Active Users', value: networkStats.totalActiveUsers.toLocaleString(), icon: <Users size={13}  /> },
               { label: 'Avg Accuracy', value: `${networkStats.avgAccuracy}%`, icon: <Globe size={13} /> },
               { label: 'Predictions', value: networkStats.totalPredictions, icon: <Activity size={13} /> },
             ].map((stat) => (
               <div
                 key={stat.label}
+               
                 className="rounded-xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 p-3 text-center"
               >
                 <div className="flex items-center justify-center gap-1 text-[#a855f7] mb-1">
                   {stat.icon}
                 </div>
                 <p className="font-black text-sm text-gray-900 dark:text-white">{stat.value}</p>
-                <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-wide mt-0.5">
+                <p   style={{
+  fontSize: '11px',
+  fontWeight: 700,
+  color: '#000000',
+  lineHeight: '1.3', 
+   
+}}  className="text-[9px] text-gray-700 text-xs font-bold tracking-wide mt-0.5">
                   {stat.label}
                 </p>
               </div>
@@ -1514,12 +1614,11 @@ export function LeaderboardScreen() {
               <>
                 <motion.div className="space-y-2.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   {paginatedList.map((entry, index) => {
-                    const rank =
-                      selectedCategory === 'All'
-                        ? entry.rank || (currentPage - 1) * itemsPerPage + index + 1
-                        : (currentPage - 1) * itemsPerPage + index + 1;
+                    // Always compute rank from absolute position to avoid duplicate medals from API
+                    const rank = (currentPage - 1) * itemsPerPage + index + 1;
                     const medal = getRankMedal(rank);
                     const isCurrentUser = entry.user_id === currentUserId;
+                    const pal = getPalette(index);
 
                     return (
                       <motion.div
@@ -1527,12 +1626,19 @@ export function LeaderboardScreen() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.04 }}
-                        className={`group flex items-center gap-3 md:gap-4 px-4 py-3.5 rounded-2xl bg-white dark:bg-white/5 border transition-all hover:shadow-md hover:border-[#a855f7]/30 ${
+                        onClick={() => toggleExpand(entry.user_id)}
+                        className={`group flex flex-col gap-3 md:gap-4 px-4 py-3.5 rounded-2xl border transition-all hover:shadow-md cursor-pointer ${
                           isCurrentUser
-                            ? 'border-[#a855f7]/50 bg-gradient-to-r from-[#a855f7]/5 to-transparent dark:from-[#a855f7]/10'
-                            : 'border-gray-100 dark:border-white/5'
-                        }`}
+                            ? 'border-[#a855f7]/50 shadow-sm ring-1 ring-[#a855f7]/20'
+                            : 'border-gray-100 dark:border-white/5 hover:border-[#a855f7]/30'
+                        } ${expandedUserId === entry.user_id ? 'border-[#a855f7]/50 shadow-md ring-1 ring-[#a855f7]/20' : ''}`}
+                        style={{
+                          borderLeftWidth: 3,
+                          borderLeftColor: isCurrentUser ? '#a855f7' : pal.border,
+                          background: isCurrentUser ? 'rgba(168,85,247,0.12)' : pal.bg,
+                        }}
                       >
+                        <div className="flex items-center gap-3 md:gap-4">
                         {/* Rank */}
                         <div className="w-8 md:w-10 flex items-center justify-center flex-shrink-0">
                           {medal ? (
@@ -1557,7 +1663,7 @@ export function LeaderboardScreen() {
                               {entry.user?.name || 'Anonymous User'}
                             </p>
                             {entry.user?.username && (
-                              <span className="text-xs text-gray-400 truncate">
+                              <span className="text-xs text-gray-700 truncate">
                                 @{entry.user.username}
                               </span>
                             )}
@@ -1583,7 +1689,7 @@ export function LeaderboardScreen() {
                             </span>
                             <TrendingUp size={12} className="text-[#a855f7]" />
                           </div>
-                          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">
+                          <p className="text-[10px] text-gray-700 font-semibold uppercase tracking-wide">
                             {entry.total_predictions} Predictions
                           </p>
                           {/* Mini score bar */}
@@ -1592,8 +1698,106 @@ export function LeaderboardScreen() {
                               className="h-full rounded-full bg-[#a855f7]"
                               style={{ width: `${Math.min(100, (entry.score / 1000) * 100)}%` }}
                             />
-                          </div>
                         </div>
+                        </div>
+                        </div>
+
+                        {/* Expanded View */ }
+                        <AnimatePresence>
+                          {expandedUserId === entry.user_id && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden border-t border-gray-100 dark:border-white/10 pt-4 mt-1"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+                                <div>
+                                  <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-1">
+                                    {entry.user?.name || 'Anonymous User'}'s Stats
+                                  </h3>
+                                  <p className="text-xs text-gray-700 dark:text-gray-400">
+                                    Total Points: <span className="font-black text-[#a855f7]">{entry.score || 0}</span> • Accuracy: <span className="font-bold text-gray-700 dark:text-gray-300">{entry.accuracy}%</span>
+                                  </p>
+                                </div>
+                                {!isCurrentUser && (
+                                  <button
+                                    onClick={() => toggleFollow(entry.user_id, entry.user?.name || 'User')}
+                                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                                      following[entry.user_id]
+                                        ? 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20'
+                                        : 'bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/20 hover:scale-105 hover:bg-[#9333ea]'
+                                    }`}
+                                  >
+                                    {following[entry.user_id] ? 'Following' : 'Follow'}
+                                  </button>
+                                )}
+                              </div>
+                              
+                              <div className="space-y-2.5">
+                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">Recent Predictions</h4>
+                                {loadingUserPredictions ? (
+                                  <div className="h-16 bg-gray-50 dark:bg-white/5 rounded-xl animate-pulse"></div>
+                                ) : userPredictions.length > 0 ? (
+                                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1 hide-scrollbar">
+                                    {userPredictions.map((pred: any, i: number) => (
+                                      <div 
+                                        key={i} 
+                                        onClick={() => {
+                                          if (pred.module_type === 'poll') {
+                                            navigate(`/poll/${pred.id}`);
+                                          } else {
+                                            navigate(`/prediction/${pred.id}`);
+                                          }
+                                        }}
+                                        className="p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-colors hover:border-[#a855f7] cursor-pointer"
+                                      >
+                                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 leading-snug">{pred.questions}</p>
+                                        {/* <div className="flex flex-wrap gap-3 mt-2">
+                                          {pred.field?.fields && (
+                                            <span className="text-[10px] text-gray-500 font-bold bg-white dark:bg-black/20 px-2 py-0.5 rounded-md border border-gray-200 dark:border-white/5">
+                                              {pred.field.fields}
+                                            </span>
+                                          )}
+                                          {pred.end_date && (
+                                            <span className="text-[10px] text-gray-500 font-bold bg-white dark:bg-black/20 px-2 py-0.5 rounded-md border border-gray-200 dark:border-white/5">
+                                              Ends: {new Date(pred.end_date).toLocaleDateString()}
+                                            </span>
+                                          )}
+                                          <span className="text-[10px] text-[#a855f7] font-bold bg-[#a855f7]/10 px-2 py-0.5 rounded-md ml-auto">
+                                            {pred.answers_count || 0} Votes
+                                          </span>
+                                        </div> */}
+                                        <div className="flex flex-wrap gap-3 mt-2">
+  {pred.field?.fields && (
+    <span className="text-[11px] text-gray-600 font-semibold bg-white dark:bg-black/20 px-3 py-1 rounded-md border border-gray-200 dark:border-white/5 min-h-[24px] flex items-center">
+      {pred.field.fields}
+    </span>
+  )}
+
+  {pred.end_date && (
+    <span className="text-[11px] text-gray-600 font-semibold bg-white dark:bg-black/20 px-3 py-1 rounded-md border border-gray-200 dark:border-white/5 min-h-[24px] flex items-center">
+      Ends: {new Date(pred.end_date).toLocaleDateString()}
+    </span>
+  )}
+
+  <span className="text-[11px] text-[#a855f7] font-semibold bg-[#a855f7]/10 px-3 py-1 rounded-md ml-auto min-h-[24px] flex items-center">
+    {pred.answers_count || 0} Votes
+  </span>
+</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="p-5 text-center rounded-xl bg-gray-50 dark:bg-white/5 border border-dashed border-gray-200 dark:border-white/10">
+                                    <p className="text-xs text-gray-500 font-medium">No public predictions found for this user.</p>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </motion.div>
                     );
                   })}
@@ -1667,7 +1871,7 @@ export function LeaderboardScreen() {
             </div>
 
             {/* Footer links */}
-            <div className="text-center space-y-1">
+            {/* <div className="text-center space-y-1">
               <div className="flex flex-wrap justify-center gap-3 text-[10px] text-gray-400 font-semibold uppercase tracking-wide">
                 <button className="hover:text-gray-600 dark:hover:text-gray-200 transition">
                   Terms of Service
@@ -1683,7 +1887,7 @@ export function LeaderboardScreen() {
               <p className="text-[9px] text-gray-300 dark:text-gray-600">
                 © 2024 | Said So Inc. All rights reserved.
               </p>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
