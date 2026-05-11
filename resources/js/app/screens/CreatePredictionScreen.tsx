@@ -1204,8 +1204,8 @@ function SectionCard({ children, paletteIndex = 0 }: { children: React.ReactNode
   const pal = getPalette(paletteIndex);
   return (
     <div
-      className="glass-card rounded-2xl p-5 border border-border/50 shadow-sm overflow-hidden"
-      style={{ borderLeftWidth: 3, borderLeftColor: pal.border, background: pal.bg }}
+      className="rounded-2xl p-5 border border-border/50 shadow-sm overflow-hidden bg-white"
+      style={{ borderLeftWidth: 3, borderLeftColor: pal.border }}
     >
       {children}
     </div>
@@ -1442,13 +1442,13 @@ export function CreatePredictionScreen() {
                   + Add
                 </Button>
               </DialogTrigger>
-              <DialogContent className="glass-card border-border">
+              <DialogContent className="bg-white border-border">
                 <DialogHeader>
                   <DialogTitle className="font-bold">New Category</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-3 py-3">
                   <Input placeholder="e.g. Technology, Sports" value={newFieldName}
-                    onChange={e => setNewFieldName(e.target.value)} className="glass-card border-border h-10" />
+                    onChange={e => setNewFieldName(e.target.value)} className="bg-white border-border h-10" />
                   <Button onClick={handleAddField} disabled={isAddingField} className="w-full text-white border-0"
                     style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}>
                     {isAddingField ? 'Adding…' : 'Create'}
@@ -1459,10 +1459,10 @@ export function CreatePredictionScreen() {
           )}
         </div>
         <Select value={selectedFieldId?.toString() ?? ''} onValueChange={v => setSelectedFieldId(Number(v))}>
-          <SelectTrigger className="glass-card border-border h-10">
+          <SelectTrigger className="bg-white border-border h-10">
             <SelectValue placeholder="Select category" />
           </SelectTrigger>
-          <SelectContent className="glass-card border-border">
+          <SelectContent className="bg-white border-border">
             {fields.map(f => (
               <SelectItem key={f.id} value={f.id.toString()}>{f.fields}</SelectItem>
             ))}
@@ -1590,7 +1590,7 @@ export function CreatePredictionScreen() {
                   placeholder="Write your bold prediction..."
                   value={text}
                   onChange={e => setText(e.target.value)}
-                  className="glass-card border-border min-h-28 p-4 text-sm text-foreground"
+                  className="bg-white border-border min-h-28 p-4 text-sm text-foreground"
                   maxLength={500}
                 />
                 <div className="flex justify-end mt-1">
@@ -1604,7 +1604,7 @@ export function CreatePredictionScreen() {
                     placeholder="Provide context or evidence..."
                     value={description}
                     onChange={e => setDescription(e.target.value)}
-                    className="glass-card border-border min-h-20 p-3 text-sm"
+                    className="bg-white border-border min-h-20 p-3 text-sm"
                   />
                 </div>
               </SectionCard>
@@ -1619,7 +1619,7 @@ export function CreatePredictionScreen() {
                     </Label>
                     <Input type="datetime-local" value={predictionOverDate}
                       onChange={e => setPredictionOverDate(e.target.value)}
-                      className="glass-card border-border h-10"
+                      className="bg-white border-border h-10"
                       min={new Date().toISOString().slice(0, 16)} />
                   </div>
                   <div className="space-y-1.5">
@@ -1628,7 +1628,7 @@ export function CreatePredictionScreen() {
                     </Label>
                     <Input type="datetime-local" value={votingEndDate}
                       onChange={e => setVotingEndDate(e.target.value)}
-                      className="glass-card border-border h-10" />
+                      className="bg-white border-border h-10" />
                   </div>
                 </div>
               </SectionCard>
@@ -1659,8 +1659,8 @@ export function CreatePredictionScreen() {
 
               {/* Review card — palette 0 (purple) */}
               <div
-                className="glass-card rounded-2xl border border-border/50 p-5 md:p-7 shadow-sm overflow-hidden relative"
-                style={{ borderLeftWidth: 3, borderLeftColor: '#a855f7', background: 'rgba(168,85,247,0.06)' }}>
+                className="bg-white rounded-2xl border border-border/50 p-5 md:p-7 shadow-sm overflow-hidden relative"
+                style={{ borderLeftWidth: 3, borderLeftColor: '#a855f7' }}>
 
                 {/* Top progress bar */}
                 <div className="absolute top-0 left-0 w-full h-1"
@@ -1742,7 +1742,7 @@ export function CreatePredictionScreen() {
                 <SectionHeading icon={Zap} label="Poll question" paletteIndex={0} />
                 <Textarea placeholder="What would you like to ask?"
                   value={text} onChange={e => setText(e.target.value)}
-                  className="glass-card border-border min-h-28 p-4 text-sm" maxLength={500} />
+                  className="bg-white border-border min-h-28 p-4 text-sm" maxLength={500} />
                 <div className="flex justify-end mt-1">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{text.length}/500</span>
                 </div>
@@ -1763,7 +1763,7 @@ export function CreatePredictionScreen() {
                   {pollOptions.map((opt, i) => (
                     <div key={i} className="flex gap-2">
                       <Input value={opt} onChange={e => handlePollOptionChange(i, e.target.value)}
-                        placeholder={`Option ${i + 1}`} className="glass-card border-border h-10" />
+                        placeholder={`Option ${i + 1}`} className="bg-white border-border h-10" />
                       {pollOptions.length > 2 && (
                         <Button variant="ghost" size="icon" onClick={() => handleRemovePollOption(i)}
                           className="text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 h-10 w-10 shrink-0">
@@ -1779,10 +1779,10 @@ export function CreatePredictionScreen() {
                     Correct answer <span className="normal-case font-normal">(optional)</span>
                   </Label>
                   <Select value={pollCorrectAnswer} onValueChange={setPollCorrectAnswer}>
-                    <SelectTrigger className="glass-card border-border h-10">
+                    <SelectTrigger className="bg-white border-border h-10">
                       <SelectValue placeholder="None / General opinion" />
                     </SelectTrigger>
-                    <SelectContent className="glass-card">
+                    <SelectContent className="bg-white border-border">
                       {pollOptions.filter(o => o.trim()).map((o, i) => (
                         <SelectItem key={i} value={o.trim()}>{o.trim()}</SelectItem>
                       ))}
@@ -1801,7 +1801,7 @@ export function CreatePredictionScreen() {
                   </Label>
                   <Input type="datetime-local" value={votingEndDate}
                     onChange={e => setVotingEndDate(e.target.value)}
-                    className="glass-card border-border h-10"
+                    className="bg-white border-border h-10"
                     min={new Date().toISOString().slice(0, 16)} />
                 </div>
               </SectionCard>

@@ -182,7 +182,7 @@
 //                         placeholder="Describe your group..."
 //                         value={newGroupDescription}
 //                         onChange={(e) => setNewGroupDescription(e.target.value)}
-//                         className="glass-card min-h-[60px] md:min-h-[100px] text-xs md:text-sm"
+//                         className="bg-white min-h-[60px] md:min-h-[100px] text-xs md:text-sm"
 //                       />
 //                     </div>
 //                     <div className="flex items-center gap-2">
@@ -750,7 +750,7 @@ export function GroupsScreen() {
                     Create
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="glass-card sm:max-w-md p-4 md:p-6">
+                <DialogContent className="sm:max-w-md p-4 md:p-6 bg-white">
                   <DialogHeader>
                     <DialogTitle className="text-sm md:text-lg">Create New Group</DialogTitle>
                   </DialogHeader>
@@ -761,7 +761,7 @@ export function GroupsScreen() {
                         placeholder="Enter group name"
                         value={newGroupName}
                         onChange={(e) => setNewGroupName(e.target.value)}
-                        className="glass-card h-8 md:h-10 text-xs md:text-sm"
+                        className="bg-white h-8 md:h-10 text-xs md:text-sm"
                       />
                     </div>
                     <div className="space-y-1.5 md:space-y-2">
@@ -770,7 +770,7 @@ export function GroupsScreen() {
                         placeholder="Describe your group..."
                         value={newGroupDescription}
                         onChange={(e) => setNewGroupDescription(e.target.value)}
-                        className="glass-card min-h-[60px] md:min-h-[100px] text-xs md:text-sm"
+                        className="bg-white min-h-[60px] md:min-h-[100px] text-xs md:text-sm"
                       />
                     </div>
                     <div className="flex items-center gap-2">

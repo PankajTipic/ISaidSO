@@ -631,7 +631,7 @@ const confirmRemoveMember = async () => {
         initial={{ scale: 0.95, opacity: 0, y: 30 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 30 }}
-        className="glass-card rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl border border-border"
+        className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl border border-border"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">

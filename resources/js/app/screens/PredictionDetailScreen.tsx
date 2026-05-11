@@ -143,7 +143,7 @@ export function PredictionDetailScreen() {
       <div className="min-h-screen bg-[#f8f8f6] dark:bg-[#0f0f0f] flex flex-col items-center justify-center gap-4 p-6">
         <h2 className="text-lg font-black text-red-500 uppercase">Error</h2>
         <p className="text-muted-foreground text-sm text-center font-bold uppercase">{fetchError || 'Not found'}</p>
-        <Button onClick={() => navigate(-1)} variant="outline"  className="h-10 px-6 rounded-xl text-xs font-bold uppercase">Back</Button>
+        <Button onClick={() => navigate(-1)} variant="outline" className="h-10 px-6 rounded-xl text-xs font-bold uppercase">Back</Button>
       </div>
     );
   }
@@ -210,15 +210,13 @@ export function PredictionDetailScreen() {
               {prediction?.field?.fields || 'GENERAL'}
             </span>
 
-            <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-tight border ${
-              isClosed ? 'bg-red-50 text-red-500 border-red-100' : 'bg-emerald-50 text-emerald-500 border-emerald-100'
-            }`}>
+            <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-tight border ${isClosed ? 'bg-red-50 text-red-500 border-red-100' : 'bg-emerald-50 text-emerald-500 border-emerald-100'
+              }`}>
               {isClosed ? 'CLOSED' : 'OPEN'}
             </span>
 
-            <div className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-tight border ${
-              prediction?.visibility === 'private' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-blue-50 text-blue-600 border-blue-100'
-            }`}>
+            <div className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-tight border ${prediction?.visibility === 'private' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-blue-50 text-blue-600 border-blue-100'
+              }`}>
               {prediction?.visibility === 'private' ? <Lock size={11} /> : <Globe size={11} />}
               {prediction?.visibility === 'private' ? 'PRIVATE' : 'PUBLIC'}
             </div>
@@ -226,7 +224,7 @@ export function PredictionDetailScreen() {
 
           {/* ── Main Layout Grid ── */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 items-start">
-            
+
             {/* LEFT COLUMN (2/3) */}
             <div className="lg:col-span-8 space-y-1">
 
@@ -269,13 +267,13 @@ export function PredictionDetailScreen() {
                 <div className="relative px-2">
                   {/* Background Track */}
                   <div className="absolute top-[12px] left-0 right-0 h-[3px] bg-gray-100 dark:bg-white/10 rounded-full" />
-                  
+
                   {/* Dynamic Progress Track */}
-                  <div 
-                    className="absolute top-[12px] left-0 h-[3px] bg-gradient-to-r from-[#111111] to-[#444444] rounded-full transition-all duration-1000" 
-                    style={{ 
-                      width: isClosed ? '100%' : (new Date() > new Date(prediction.voting_end_date) ? '66%' : '33%') 
-                    }} 
+                  <div
+                    className="absolute top-[12px] left-0 h-[3px] bg-gradient-to-r from-[#111111] to-[#444444] rounded-full transition-all duration-1000"
+                    style={{
+                      width: isClosed ? '100%' : (new Date() > new Date(prediction.voting_end_date) ? '66%' : '33%')
+                    }}
                   />
 
                   <div className="relative flex justify-between">
@@ -285,9 +283,8 @@ export function PredictionDetailScreen() {
                       { label: "Prediction Due", date: prediction.end_date, done: isClosed },
                     ].map((step, i) => (
                       <div key={i} className="flex flex-col items-center text-center w-[33%]">
-                        <div className={`w-6 h-6 z-10 flex items-center justify-center rounded-full text-[10px] transition-all duration-500 ring-4 ring-white dark:ring-[#0f0f0f] ${
-                          step.done ? "bg-[#111111] text-white shadow-md" : "bg-gray-100 text-gray-400"
-                        }`}>
+                        <div className={`w-6 h-6 z-10 flex items-center justify-center rounded-full text-[10px] transition-all duration-500 ring-4 ring-white dark:ring-[#0f0f0f] ${step.done ? "bg-[#111111] text-white shadow-md" : "bg-gray-100 text-gray-400"
+                          }`}>
                           {step.done ? "✓" : i + 1}
                         </div>
                         <p className={`text-[12px] mt-2 font-bold ${step.done ? "text-[#111111]" : "text-[#667781]"}`}>{step.label}</p>
@@ -328,7 +325,7 @@ export function PredictionDetailScreen() {
                               View Details ({totalValidVotes})
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="glass-card border-slate-200 dark:border-white/10 sm:max-w-md p-4">
+                          <DialogContent className="bg-white border-slate-200 dark:border-white/10 sm:max-w-md p-4">
                             <DialogHeader className="mb-4">
                               <DialogTitle className="text-[14px] font-bold text-[#111111] uppercase tracking-wide">Community Insights</DialogTitle>
                             </DialogHeader>
@@ -350,11 +347,10 @@ export function PredictionDetailScreen() {
                                       </div>
                                     </div>
                                   </div>
-                                  <div className={`px-3 py-1 rounded-lg text-[12px] font-bold tracking-tight border ${
-                                    v.answer?.toLowerCase() === 'yes' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                    v.answer?.toLowerCase() === 'no' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                                    'bg-amber-50 text-amber-600 border-amber-100'
-                                  }`}>
+                                  <div className={`px-3 py-1 rounded-lg text-[12px] font-bold tracking-tight border ${v.answer?.toLowerCase() === 'yes' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                      v.answer?.toLowerCase() === 'no' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                        'bg-amber-50 text-amber-600 border-amber-100'
+                                    }`}>
                                     {v.answer?.toUpperCase()}
                                   </div>
                                 </div>
@@ -381,17 +377,16 @@ export function PredictionDetailScreen() {
                         <button
                           key={option}
                           onClick={() => setSelectedAnswer(option)}
-                          className={`py-3.5 rounded-xl border-2 transition-all font-bold text-[14px] uppercase tracking-wide ${
-                            selectedAnswer === option 
-                              ? "bg-[#111111] text-white border-[#111111] shadow-md" 
+                          className={`py-3.5 rounded-xl border-2 transition-all font-bold text-[14px] uppercase tracking-wide ${selectedAnswer === option
+                              ? "bg-[#111111] text-white border-[#111111] shadow-md"
                               : "bg-white dark:bg-white/5 border-gray-100 hover:bg-gray-50"
-                          }`}
+                            }`}
                         >
                           {option}
                         </button>
                       ))}
                     </div>
-                    <Button 
+                    <Button
                       className="h-14 md:h-auto md:w-36 rounded-xl text-[14px] font-bold bg-[#111111] hover:bg-[#222222] transition-all"
                       onClick={handleVote}
                       disabled={submitting || !selectedAnswer || hasVoted}
@@ -405,7 +400,7 @@ export function PredictionDetailScreen() {
 
             {/* RIGHT COLUMN (1/3) */}
             <div className="lg:col-span-4 space-y-1 lg:sticky lg:top-0">
-              
+
               {/* Summary Stats - Premium Card */}
               <div className="rounded-2xl p-4 border border-gray-100 shadow-sm" style={{ borderLeft: `3px solid ${cardPalettes[3].border}`, background: cardPalettes[3].bg }}>
                 <div className="flex items-center gap-2 mb-3">

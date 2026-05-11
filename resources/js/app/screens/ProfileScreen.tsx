@@ -780,10 +780,17 @@ import { TopNav } from '@/app/components/TopNav';
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
 import { Progress } from '@/app/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs';
-import { Trophy, Target, TrendingUp, Award, LogOut, Edit2, Loader2, MapPin, User, AtSign, Trash2, Calendar, Globe, Lock, Users, Clock, X } from 'lucide-react';
+import { 
+  Trophy, Target, TrendingUp, Award, LogOut, Edit2, Loader2, MapPin, 
+  User, AtSign, Trash2, Calendar, Globe, Lock, Users, Clock, X, 
+  Pencil, Zap, BarChart2 
+} from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
+import { Textarea } from '@/app/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
 import { logoutUser, checkAuthStatus } from '@/app/modules/auth/authSlice';
@@ -845,6 +852,27 @@ function getPalette(index: number) {
   return cardPalettes[index % cardPalettes.length];
 }
 
+function SectionCard({ children, paletteIndex = 0 }: { children: React.ReactNode; paletteIndex?: number }) {
+  const pal = getPalette(paletteIndex);
+  return (
+    <div className="rounded-2xl p-4 border border-gray-100 shadow-sm overflow-hidden bg-white" style={{ borderLeftWidth: 3, borderLeftColor: pal.border }}>
+      {children}
+    </div>
+  );
+}
+
+function SectionHeading({ icon: Icon, label, paletteIndex = 0 }: { icon: any; label: string; paletteIndex?: number }) {
+  const pal = getPalette(paletteIndex);
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: pal.iconBg }}>
+        <Icon size={12} style={{ color: pal.border }} />
+      </div>
+      <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: pal.border }}>{label}</span>
+    </div>
+  );
+}
+
 export function ProfileScreen() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -866,9 +894,13 @@ export function ProfileScreen() {
   // Question Edit state
   const [questionEditOpen, setQuestionEditOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<any>(null);
+  const [fields, setFields] = useState<any[]>([]);
+  const [editQuestionFieldId, setEditQuestionFieldId] = useState<number | null>(null);
   const [editQuestionText, setEditQuestionText] = useState('');
-  const [editQuestionVisibility, setEditQuestionVisibility] = useState('public');
+  const [editQuestionDescription, setEditQuestionDescription] = useState('');
+  const [editQuestionVisibility, setEditQuestionVisibility] = useState<'public' | 'private'>('public');
   const [editQuestionEndDate, setEditQuestionEndDate] = useState('');
+  const [editQuestionVotingEndDate, setEditQuestionVotingEndDate] = useState('');
   const [isUpdatingQuestion, setIsUpdatingQuestion] = useState(false);
 
   const fetchProfile = async () => {
@@ -886,7 +918,17 @@ export function ProfileScreen() {
 
   useEffect(() => {
     fetchProfile();
+    fetchFields();
   }, []);
+
+  const fetchFields = async () => {
+    try {
+      const res = await getAuth('/api/fields');
+      setFields(res?.data ?? res ?? []);
+    } catch (err) {
+      console.error('Failed to fetch fields', err);
+    }
+  };
 
   const user = profile?.user;
   const summary = profile?.summary;
@@ -947,7 +989,7 @@ export function ProfileScreen() {
   const handleDeleteQuestion = (id: number) => {
     toast.custom(
       (t) => (
-        <div className="glass-card p-6 rounded-2xl max-w-sm w-full shadow-2xl border border-red-200 bg-white">
+        <div className="bg-white p-6 rounded-2xl max-w-sm w-full shadow-2xl border border-red-200">
           <div className="text-center space-y-4">
             <div className="mx-auto w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
               <Trash2 size={28} className="text-red-500" />
@@ -995,9 +1037,12 @@ export function ProfileScreen() {
 
   const openQuestionEdit = (q: any) => {
     setEditingQuestion(q);
+    setEditQuestionFieldId(q.field_id);
     setEditQuestionText(q.questions || '');
+    setEditQuestionDescription(q.description || '');
     setEditQuestionVisibility(q.visibility || 'public');
-    setEditQuestionEndDate(q.end_date ? q.end_date.split('T')[0] : '');
+    setEditQuestionEndDate(q.end_date ? new Date(q.end_date).toISOString().slice(0, 16) : '');
+    setEditQuestionVotingEndDate(q.voting_end_date ? new Date(q.voting_end_date).toISOString().slice(0, 16) : '');
     setQuestionEditOpen(true);
   };
 
@@ -1006,9 +1051,12 @@ export function ProfileScreen() {
     try {
       setIsUpdatingQuestion(true);
       await putAuth(`/api/questions/${editingQuestion.id}`, {
+        field_id: editQuestionFieldId,
         questions: editQuestionText,
+        description: editQuestionDescription,
         visibility: editQuestionVisibility,
         end_date: editQuestionEndDate || null,
+        voting_end_date: editQuestionVotingEndDate || null,
       });
       toast.success('Question updated successfully!');
       fetchProfile();
@@ -1026,7 +1074,7 @@ export function ProfileScreen() {
 
     toast.custom(
       (t) => (
-        <div className="glass-card p-6 rounded-2xl max-w-sm w-full shadow-2xl border border-primary/20 bg-white">
+        <div className="bg-white p-6 rounded-2xl max-w-sm w-full shadow-2xl border border-primary/20">
           <div className="text-center space-y-4">
             <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center ${isPublic ? 'bg-amber-50' : 'bg-blue-50'}`}>
               {isPublic ? <Lock size={28} className="text-amber-500" /> : <Globe size={28} className="text-blue-500" />}
@@ -1464,7 +1512,7 @@ export function ProfileScreen() {
               initial={{ scale: 0.95, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 30 }}
-              className="glass-card rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl border border-border my-auto"
+              className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl border border-border my-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-8">
@@ -1488,7 +1536,7 @@ export function ProfileScreen() {
                   <Input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="h-11 md:h-12 rounded-xl bg-muted/30 border-border"
+                    className="h-11 md:h-12 rounded-xl bg-white border-border"
                   />
                 </div>
 
@@ -1497,7 +1545,7 @@ export function ProfileScreen() {
                   <Input
                     value={editUsername}
                     onChange={(e) => setEditUsername(e.target.value)}
-                    className="h-11 md:h-12 rounded-xl bg-muted/30 border-border"
+                    className="h-11 md:h-12 rounded-xl bg-white border-border"
                   />
                 </div>
 
@@ -1507,7 +1555,7 @@ export function ProfileScreen() {
                     <Input
                       value={editCountry}
                       onChange={(e) => setEditCountry(e.target.value)}
-                      className="h-11 md:h-12 rounded-xl bg-muted/30 border-border"
+                      className="h-11 md:h-12 rounded-xl bg-white border-border"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1515,7 +1563,7 @@ export function ProfileScreen() {
                     <Input
                       value={editCity}
                       onChange={(e) => setEditCity(e.target.value)}
-                      className="h-11 md:h-12 rounded-xl bg-muted/30 border-border"
+                      className="h-11 md:h-12 rounded-xl bg-white border-border"
                     />
                   </div>
                 </div>
@@ -1550,69 +1598,108 @@ export function ProfileScreen() {
               initial={{ scale: 0.95, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 30 }}
-              className="glass-card rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl border border-border my-auto"
+              className="bg-[#f8f8f6] rounded-[2rem] p-4 md:p-8 w-full max-w-2xl shadow-2xl border-none my-auto max-h-[90vh] overflow-y-auto custom-scrollbar"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-black text-foreground">Edit Prediction</h2>
-                <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setQuestionEditOpen(false)}>
+              <div className="flex items-center justify-between mb-8 px-2">
+                <h2 className="text-2xl font-black text-foreground flex items-center gap-3">
+                  <Zap size={28} className="text-[#a855f7]" /> Edit Prediction
+                </h2>
+                <Button variant="ghost" size="icon" className="rounded-full bg-white shadow-sm" onClick={() => setQuestionEditOpen(false)}>
                   <X size={20} />
                 </Button>
               </div>
 
-              <div className="space-y-5">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase tracking-widest ml-1 text-muted-foreground">The Question</Label>
-                  <Input
+              <div className="space-y-4">
+                {/* Category */}
+                <SectionCard paletteIndex={0}>
+                  <SectionHeading icon={BarChart2} label="Category" paletteIndex={0} />
+                  <Select value={editQuestionFieldId?.toString() ?? ''} onValueChange={v => setEditQuestionFieldId(Number(v))}>
+                    <SelectTrigger className="bg-white border-gray-200 h-10">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      {fields.map(f => (
+                        <SelectItem key={f.id} value={f.id.toString()}>{f.fields}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </SectionCard>
+
+                {/* Question & Description */}
+                <SectionCard paletteIndex={1}>
+                  <SectionHeading icon={Zap} label="Your prediction" paletteIndex={1} />
+                  <Textarea
+                    placeholder="Write your prediction..."
                     value={editQuestionText}
-                    onChange={(e) => setEditQuestionText(e.target.value)}
-                    className="h-11 md:h-12 rounded-xl bg-muted/30 border-border"
-                    placeholder="Enter your prediction question..."
+                    onChange={e => setEditQuestionText(e.target.value)}
+                    className="bg-white border-gray-200 min-h-24 p-4 text-sm"
                   />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase tracking-widest ml-1 text-muted-foreground">Visibility</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      type="button"
-                      variant={editQuestionVisibility === 'public' ? 'default' : 'outline'}
-                      onClick={() => setEditQuestionVisibility('public')}
-                      className="rounded-xl h-11 md:h-12 gap-2"
-                    >
-                      <Globe size={16} /> Public
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={editQuestionVisibility === 'private' ? 'default' : 'outline'}
-                      onClick={() => setEditQuestionVisibility('private')}
-                      className="rounded-xl h-11 md:h-12 gap-2"
-                    >
-                      <Lock size={16} /> Private
-                    </Button>
+                  <div className="mt-4 space-y-2">
+                    <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                      Description
+                    </Label>
+                    <Textarea
+                      placeholder="Context or evidence..."
+                      value={editQuestionDescription}
+                      onChange={e => setEditQuestionDescription(e.target.value)}
+                      className="bg-white border-gray-200 min-h-20 p-3 text-sm"
+                    />
                   </div>
-                </div>
+                </SectionCard>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase tracking-widest ml-1 text-muted-foreground">Prediction End Date</Label>
-                  <Input
-                    type="date"
-                    value={editQuestionEndDate}
-                    onChange={(e) => setEditQuestionEndDate(e.target.value)}
-                    className="h-11 md:h-12 rounded-xl bg-muted/30 border-border"
-                  />
-                </div>
-              </div>
+                {/* Timing */}
+                <SectionCard paletteIndex={2}>
+                  <SectionHeading icon={Calendar} label="Timing" paletteIndex={2} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                        Prediction Ends
+                      </Label>
+                      <Input 
+                        type="datetime-local" 
+                        value={editQuestionEndDate}
+                        onChange={e => setEditQuestionEndDate(e.target.value)}
+                        className="bg-white border-gray-200 h-10" 
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                        Voting Ends
+                      </Label>
+                      <Input 
+                        type="datetime-local" 
+                        value={editQuestionVotingEndDate}
+                        onChange={e => setEditQuestionVotingEndDate(e.target.value)}
+                        className="bg-white border-gray-200 h-10" 
+                      />
+                    </div>
+                  </div>
+                </SectionCard>
 
-              <div className="mt-8">
-                <Button
-                  onClick={handleUpdateQuestion}
-                  disabled={isUpdatingQuestion}
-                  className="w-full h-12 md:h-14 rounded-2xl font-bold text-base md:text-lg shadow-lg"
-                  style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
-                >
-                  {isUpdatingQuestion ? <Loader2 size={18} className="animate-spin" /> : 'Update Prediction'}
-                </Button>
+                {/* Visibility */}
+                <SectionCard paletteIndex={4}>
+                  <SectionHeading icon={editQuestionVisibility === 'public' ? Globe : Lock} label="Visibility" paletteIndex={4} />
+                  <RadioGroup value={editQuestionVisibility} onValueChange={v => setEditQuestionVisibility(v as any)} className="flex gap-6 items-center">
+                    {['public', 'private'].map(v => (
+                      <div key={v} className="flex items-center space-x-2">
+                        <RadioGroupItem value={v} id={`profile-edit-vis-${v}`} className="border-[#a855f7] text-[#a855f7]" />
+                        <Label htmlFor={`profile-edit-vis-${v}`} className="cursor-pointer text-xs font-bold uppercase tracking-wide capitalize">{v}</Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </SectionCard>
+
+                <div className="pt-6">
+                  <Button
+                    onClick={handleUpdateQuestion}
+                    disabled={isUpdatingQuestion}
+                    className="w-full h-14 rounded-2xl font-bold text-lg shadow-xl text-white border-0"
+                    style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
+                  >
+                    {isUpdatingQuestion ? <Loader2 size={18} className="animate-spin" /> : 'Update Prediction'}
+                  </Button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
