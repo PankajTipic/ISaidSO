@@ -469,10 +469,29 @@ interface Group {
   isBlocked?: boolean;
 }
 
+const SectionCard = ({ children, title, icon: Icon, color = "#a855f7" }: { children: React.ReactNode, title: string, icon: any, color?: string }) => (
+  <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm relative overflow-hidden group transition-all hover:shadow-md" style={{ borderLeft: `4px solid ${color}` }}>
+    <div className="flex items-center gap-3 mb-6">
+      <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${color}10` }}>
+        <Icon size={18} style={{ color: color }} />
+      </div>
+      <h3 className="text-[15px] font-black text-[#111111] uppercase tracking-wider">{title}</h3>
+    </div>
+    {children}
+  </div>
+);
+
+const SectionHeading = ({ children }: { children: React.ReactNode }) => (
+  <h4 className="text-[12px] font-black text-[#667781] uppercase tracking-[0.2em] mb-4 mt-2 px-1 opacity-70">
+    {children}
+  </h4>
+);
+
 const cardPalettes = [
+
   { border: '#a855f7', bg: 'rgba(168,85,247,0.06)', badge: 'rgba(168,85,247,0.12)', badgeText: '#a855f7', iconBg: 'rgba(168,85,247,0.1)' },
   { border: '#ec4899', bg: 'rgba(236,72,153,0.06)', badge: 'rgba(236,72,153,0.12)', badgeText: '#ec4899', iconBg: 'rgba(236,72,153,0.1)' },
-  { border: '#06b6d4', bg: 'rgba(6,182,212,0.06)',  badge: 'rgba(6,182,212,0.12)',  badgeText: '#0891b2', iconBg: 'rgba(6,182,212,0.1)'  },
+  { border: '#06b6d4', bg: 'rgba(6,182,212,0.06)', badge: 'rgba(6,182,212,0.12)', badgeText: '#0891b2', iconBg: 'rgba(6,182,212,0.1)' },
   { border: '#10b981', bg: 'rgba(16,185,129,0.06)', badge: 'rgba(16,185,129,0.12)', badgeText: '#059669', iconBg: 'rgba(16,185,129,0.1)' },
   { border: '#f59e0b', bg: 'rgba(245,158,11,0.06)', badge: 'rgba(245,158,11,0.12)', badgeText: '#d97706', iconBg: 'rgba(245,158,11,0.1)' },
   { border: '#3b82f6', bg: 'rgba(59,130,246,0.06)', badge: 'rgba(59,130,246,0.12)', badgeText: '#2563eb', iconBg: 'rgba(59,130,246,0.1)' },
@@ -656,13 +675,13 @@ export function GroupsScreen() {
             </div>
 
             {/* Description */}
-            <p  style={{
-  fontSize: '12px',
-  fontWeight: 700,
-  color: '#000000',
-  lineHeight: '1.3', 
-   
-}}  className="text-muted-foreground mb-2 md:mb-4 text-sm line-clamp-2 leading-relaxed">
+            <p style={{
+              fontSize: '12px',
+              fontWeight: 700,
+              color: '#000000',
+              lineHeight: '1.3',
+
+            }} className="text-muted-foreground mb-2 md:mb-4 text-sm line-clamp-2 leading-relaxed">
               {group.description}
             </p>
 
@@ -678,12 +697,12 @@ export function GroupsScreen() {
                 </span>
               </div>
               <span className="text-muted-foreground/50">•</span>
-              <span  style={{
+              <span style={{
 
-  color: '#000000',
- 
-   
-}}  className="text-muted-foreground/70">
+                color: '#000000',
+
+
+              }} className="text-muted-foreground/70">
                 Created {new Date(group.createdAt).toLocaleDateString()}
               </span>
             </div>
@@ -750,48 +769,71 @@ export function GroupsScreen() {
                     Create
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md p-4 md:p-6 bg-white">
-                  <DialogHeader>
-                    <DialogTitle className="text-sm md:text-lg">Create New Group</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-3 md:space-y-4 mt-3 md:mt-4">
-                    <div className="space-y-1.5 md:space-y-2">
-                      <Label className="text-[10px] md:text-sm">Group Name</Label>
-                      <Input
-                        placeholder="Enter group name"
-                        value={newGroupName}
-                        onChange={(e) => setNewGroupName(e.target.value)}
-                        className="bg-white h-8 md:h-10 text-xs md:text-sm"
-                      />
+                <DialogContent className="sm:max-w-[500px] bg-[#f8f8f6] border-none p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
+                  <div className="p-8">
+                    <div className="flex items-center gap-3 mb-8">
+                      <div className="w-12 h-12 rounded-2xl bg-purple-500 flex items-center justify-center shadow-lg shadow-purple-200">
+                        <Plus size={24} className="text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-black text-[#111111] uppercase tracking-tighter">Create Group</h2>
+                        <p className="text-[12px] text-[#667781] font-bold uppercase tracking-widest">Build your community</p>
+                      </div>
                     </div>
-                    <div className="space-y-1.5 md:space-y-2">
-                      <Label className="text-[10px] md:text-sm">Description</Label>
-                      <Textarea
-                        placeholder="Describe your group..."
-                        value={newGroupDescription}
-                        onChange={(e) => setNewGroupDescription(e.target.value)}
-                        className="bg-white min-h-[60px] md:min-h-[100px] text-xs md:text-sm"
-                      />
+
+                    <div className="space-y-4">
+                      <SectionCard title="Group Information" icon={Users} color="#a855f7">
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <SectionHeading>Group Name</SectionHeading>
+                            <Input
+                              placeholder="Enter group name"
+                              value={newGroupName}
+                              onChange={(e) => setNewGroupName(e.target.value)}
+                              className="h-14 rounded-2xl border-gray-100 bg-gray-50/50 font-bold focus:ring-purple-500"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <SectionHeading>Description</SectionHeading>
+                            <Textarea
+                              placeholder="What is this group about?"
+                              value={newGroupDescription}
+                              onChange={(e) => setNewGroupDescription(e.target.value)}
+                              className="min-h-[100px] rounded-2xl border-gray-100 bg-gray-50/50 font-bold focus:ring-purple-500"
+                            />
+                          </div>
+                          <div className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                            <input
+                              type="checkbox"
+                              id="private"
+                              checked={isPrivate}
+                              onChange={(e) => setIsPrivate(e.target.checked)}
+                              className="w-5 h-5 rounded-lg border-gray-300 text-purple-600 focus:ring-purple-500"
+                            />
+                            <Label htmlFor="private" className="font-bold text-[13px] text-[#111111] cursor-pointer">
+                              Make this group private
+                            </Label>
+                          </div>
+                        </div>
+                      </SectionCard>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="private"
-                        checked={isPrivate}
-                        onChange={(e) => setIsPrivate(e.target.checked)}
-                        className="w-3.5 h-3.5 md:w-4 md:h-4 rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      <Label htmlFor="private" className="font-normal cursor-pointer text-[10px] md:text-sm">
-                        Make this group private
-                      </Label>
+
+                    <div className="mt-8 flex gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => setDialogOpen(false)}
+                        className="flex-1 h-14 rounded-2xl font-black uppercase tracking-widest border-2"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleCreateGroup}
+                        className="flex-[2] h-14 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-purple-100"
+                        style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
+                      >
+                        Create Group
+                      </Button>
                     </div>
-                    <Button
-                      className="w-full h-8 md:h-11 text-xs md:text-sm font-bold"
-                      onClick={handleCreateGroup}
-                      style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
-                    >
-                      Create Group
-                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>

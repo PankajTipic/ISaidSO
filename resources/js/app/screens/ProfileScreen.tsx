@@ -780,10 +780,10 @@ import { TopNav } from '@/app/components/TopNav';
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
 import { Progress } from '@/app/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs';
-import { 
-  Trophy, Target, TrendingUp, Award, LogOut, Edit2, Loader2, MapPin, 
-  User, AtSign, Trash2, Calendar, Globe, Lock, Users, Clock, X, 
-  Pencil, Zap, BarChart2 
+import {
+  Trophy, Target, TrendingUp, Award, LogOut, Edit2, Loader2, MapPin,
+  User, AtSign, Trash2, Calendar, Globe, Lock, Users, Clock, X,
+  Pencil, Zap, BarChart2
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -842,7 +842,7 @@ interface ApiResponse {
 const cardPalettes = [
   { border: '#a855f7', bg: 'rgba(168,85,247,0.06)', badge: 'rgba(168,85,247,0.12)', badgeText: '#a855f7', iconBg: 'rgba(168,85,247,0.1)' },
   { border: '#ec4899', bg: 'rgba(236,72,153,0.06)', badge: 'rgba(236,72,153,0.12)', badgeText: '#ec4899', iconBg: 'rgba(236,72,153,0.1)' },
-  { border: '#06b6d4', bg: 'rgba(6,182,212,0.06)',  badge: 'rgba(6,182,212,0.12)',  badgeText: '#0891b2', iconBg: 'rgba(6,182,212,0.1)'  },
+  { border: '#06b6d4', bg: 'rgba(6,182,212,0.06)', badge: 'rgba(6,182,212,0.12)', badgeText: '#0891b2', iconBg: 'rgba(6,182,212,0.1)' },
   { border: '#10b981', bg: 'rgba(16,185,129,0.06)', badge: 'rgba(16,185,129,0.12)', badgeText: '#059669', iconBg: 'rgba(16,185,129,0.1)' },
   { border: '#f59e0b', bg: 'rgba(245,158,11,0.06)', badge: 'rgba(245,158,11,0.12)', badgeText: '#d97706', iconBg: 'rgba(245,158,11,0.1)' },
   { border: '#3b82f6', bg: 'rgba(59,130,246,0.06)', badge: 'rgba(59,130,246,0.12)', badgeText: '#2563eb', iconBg: 'rgba(59,130,246,0.1)' },
@@ -1081,7 +1081,7 @@ export function ProfileScreen() {
             </div>
             <h3 className="text-lg font-bold text-foreground">Switch to {targetVisibility}?</h3>
             <p className="text-sm text-muted-foreground">
-              {isPublic 
+              {isPublic
                 ? "This prediction will be hidden from the public feed and only visible to you and shared groups."
                 : "This prediction will become visible to everyone on the public feed."}
             </p>
@@ -1656,22 +1656,22 @@ export function ProfileScreen() {
                       <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                         Prediction Ends
                       </Label>
-                      <Input 
-                        type="datetime-local" 
+                      <Input
+                        type="datetime-local"
                         value={editQuestionEndDate}
                         onChange={e => setEditQuestionEndDate(e.target.value)}
-                        className="bg-white border-gray-200 h-10" 
+                        className="bg-white border-gray-200 h-10"
                       />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                         Voting Ends
                       </Label>
-                      <Input 
-                        type="datetime-local" 
+                      <Input
+                        type="datetime-local"
                         value={editQuestionVotingEndDate}
                         onChange={e => setEditQuestionVotingEndDate(e.target.value)}
-                        className="bg-white border-gray-200 h-10" 
+                        className="bg-white border-gray-200 h-10"
                       />
                     </div>
                   </div>

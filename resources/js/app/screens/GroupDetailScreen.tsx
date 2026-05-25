@@ -5,9 +5,9 @@ import { TopNav } from '@/app/components/TopNav';
 import { Button } from '@/app/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar';
-import { 
-    Loader2, MessageSquare, ChevronRight, Gavel, BarChart3, Clock, 
-    Users, Lock, Globe, ArrowLeft, LogOut, UserPlus, X, Shield, 
+import {
+    Loader2, MessageSquare, ChevronRight, Gavel, BarChart3, Clock,
+    Users, Lock, Globe, ArrowLeft, LogOut, UserPlus, X, Shield,
     Calendar, AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -82,7 +82,7 @@ export function GroupDetailScreen() {
     const [addingMember, setAddingMember] = useState(false);
 
     const [removeMemberOpen, setRemoveMemberOpen] = useState(false);
-const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+    const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
     const fetchGroupDetails = async () => {
         try {
@@ -160,28 +160,28 @@ const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
     // };
 
 
- const handleRemoveMember = (userId: number) => {
-    setSelectedUserId(userId);
-    setRemoveMemberOpen(true);
-};
+    const handleRemoveMember = (userId: number) => {
+        setSelectedUserId(userId);
+        setRemoveMemberOpen(true);
+    };
 
-const confirmRemoveMember = async () => {
-    if (!selectedUserId) return;
+    const confirmRemoveMember = async () => {
+        if (!selectedUserId) return;
 
-    try {
-        await deleteAuth(`/api/groups/${id}/members/${selectedUserId}`);
+        try {
+            await deleteAuth(`/api/groups/${id}/members/${selectedUserId}`);
 
-        toast.success('Member removed');
+            toast.success('Member removed');
 
-        fetchGroupDetails();
+            fetchGroupDetails();
 
-        setRemoveMemberOpen(false);
-        setSelectedUserId(null);
+            setRemoveMemberOpen(false);
+            setSelectedUserId(null);
 
-    } catch (error) {
-        toast.error('Failed to remove member');
-    }
-};
+        } catch (error) {
+            toast.error('Failed to remove member');
+        }
+    };
 
     const handleLeaveGroup = async () => {
         if (!group || leaving) return;
@@ -341,8 +341,8 @@ const confirmRemoveMember = async () => {
                 {/* Content Tabs */}
                 <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-3 md:space-y-4">
                     <TabsList className="flex flex-wrap gap-2 bg-transparent p-0 h-auto w-full justify-start border-0 shadow-none">
-                        <TabsTrigger 
-                            value="questions" 
+                        <TabsTrigger
+                            value="questions"
                             className="
                                 px-4 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all border
                                 bg-white dark:bg-white/5
@@ -358,8 +358,8 @@ const confirmRemoveMember = async () => {
                         >
                             Questions
                         </TabsTrigger>
-                        <TabsTrigger 
-                            value="members" 
+                        <TabsTrigger
+                            value="members"
                             className="
                                 px-4 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all border
                                 bg-white dark:bg-white/5
@@ -376,8 +376,8 @@ const confirmRemoveMember = async () => {
                             Members
                         </TabsTrigger>
                         {group.isOwner && (
-                            <TabsTrigger 
-                                value="requests" 
+                            <TabsTrigger
+                                value="requests"
                                 className="
                                     px-4 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all border
                                     bg-white dark:bg-white/5
@@ -407,7 +407,7 @@ const confirmRemoveMember = async () => {
                     <TabsContent value="questions" className="mt-0 focus:outline-none">
                         <AnimatePresence mode="wait">
                             {questions.length > 0 ? (
-                                <motion.div 
+                                <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     className="grid grid-cols-1 md:grid-cols-2 gap-5"
@@ -478,7 +478,7 @@ const confirmRemoveMember = async () => {
                                     })}
                                 </motion.div>
                             ) : (
-                                <motion.div 
+                                <motion.div
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     className="py-24 text-center bg-white rounded-[2.5rem] border border-dashed border-slate-200 shadow-sm"
@@ -505,7 +505,7 @@ const confirmRemoveMember = async () => {
                     <TabsContent value="members" className="mt-0 focus:outline-none">
                         <AnimatePresence mode="wait">
                             {group.members && group.members.length > 0 ? (
-                                <motion.div 
+                                <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
@@ -556,7 +556,7 @@ const confirmRemoveMember = async () => {
                     <TabsContent value="requests" className="mt-0 focus:outline-none">
                         <AnimatePresence mode="wait">
                             {(Array.isArray(joinRequests) ? joinRequests : (joinRequests as any)?.data || []).length > 0 ? (
-                                <motion.div 
+                                <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     className="grid grid-cols-1 md:grid-cols-2 gap-3"
@@ -618,65 +618,65 @@ const confirmRemoveMember = async () => {
 
 
 
-<AnimatePresence>
-  {removeMemberOpen && (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-      onClick={() => setRemoveMemberOpen(false)}
-    >
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0, y: 30 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0, y: 30 }}
-        className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl border border-border"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-black text-foreground">
-            Remove Member
-          </h2>
+            <AnimatePresence>
+                {removeMemberOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+                        onClick={() => setRemoveMemberOpen(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 30 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 30 }}
+                            className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl border border-border"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-2xl font-black text-foreground">
+                                    Remove Member
+                                </h2>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-            onClick={() => setRemoveMemberOpen(false)}
-          >
-            <X size={20} />
-          </Button>
-        </div>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="rounded-full"
+                                    onClick={() => setRemoveMemberOpen(false)}
+                                >
+                                    <X size={20} />
+                                </Button>
+                            </div>
 
-        <p className="text-muted-foreground text-sm md:text-base mb-8">
-          Are you sure you want to remove this member from the group?
-        </p>
+                            <p className="text-muted-foreground text-sm md:text-base mb-8">
+                                Are you sure you want to remove this member from the group?
+                            </p>
 
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            className="flex-1 h-11 rounded-xl"
-            onClick={() => setRemoveMemberOpen(false)}
-          >
-            Cancel
-          </Button>
+                            <div className="flex gap-3">
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 h-11 rounded-xl"
+                                    onClick={() => setRemoveMemberOpen(false)}
+                                >
+                                    Cancel
+                                </Button>
 
-          <Button
-            onClick={confirmRemoveMember}
-            className="flex-1 h-11 rounded-xl font-bold"
-            style={{
-              background:
-                'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-            }}
-          >
-            Remove
-          </Button>
-        </div>
-      </motion.div>
-    </motion.div>
-  )}
-</AnimatePresence>
+                                <Button
+                                    onClick={confirmRemoveMember}
+                                    className="flex-1 h-11 rounded-xl font-bold"
+                                    style={{
+                                        background:
+                                            'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                                    }}
+                                >
+                                    Remove
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
 
 
