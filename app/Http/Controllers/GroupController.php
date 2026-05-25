@@ -274,26 +274,64 @@ class GroupController extends Controller
         }
     }
 
+    // public function addMember(Request $request, Group $group)
+    // {
+    //     if ($group->user_id !== Auth::id()) {
+    //         return response()->json(['message' => 'Unauthorized'], 403);
+    //     }
+
+    //     $validated = $request->validate([
+    //         'username' => 'required|string|exists:users,username'
+    //     ]);
+
+    //     $user = User::where('username', $validated['username'])->firstOrFail();
+
+    //     if ($group->members()->where('user_id', $user->id)->exists()) {
+    //         return response()->json(['message' => 'User is already a member'], 400);
+    //     }
+
+    //     $group->members()->attach($user->id);
+
+    //     return response()->json(['message' => 'User added successfully', 'user' => $user]);
+    // }
+
     public function addMember(Request $request, Group $group)
-    {
-        if ($group->user_id !== Auth::id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $validated = $request->validate([
-            'username' => 'required|string|exists:users,username'
-        ]);
-
-        $user = User::where('username', $validated['username'])->firstOrFail();
-
-        if ($group->members()->where('user_id', $user->id)->exists()) {
-            return response()->json(['message' => 'User is already a member'], 400);
-        }
-
-        $group->members()->attach($user->id);
-
-        return response()->json(['message' => 'User added successfully', 'user' => $user]);
+{
+    if ($group->user_id !== Auth::id()) {
+        return response()->json(['message' => 'Unauthorized'], 403);
     }
+
+    $validated = $request->validate([
+        'username' => 'required|string|max:255',
+    ]);
+
+    // Trim and normalize
+    $username = trim($validated['username']);
+
+    $user = User::whereRaw('LOWER(username) = LOWER(?)', [$username])->first();
+
+    if (!$user) {
+        return response()->json([
+            'message' => 'The selected username is invalid.',
+            'errors' => ['username' => ['The selected username is invalid.']]
+        ], 422);
+    }
+
+    if ($group->members()->where('user_id', $user->id)->exists()) {
+        return response()->json(['message' => 'User is already a member'], 400);
+    }
+
+    if ($user->id === Auth::id()) {
+        return response()->json(['message' => 'You cannot add yourself'], 400);
+    }
+
+    $group->members()->attach($user->id);
+
+    return response()->json([
+        'message' => 'Member added successfully',
+        'user' => $user->only(['id', 'name', 'username', 'avatar'])
+    ]);
+}
 
     public function removeMember(Request $request, Group $group, $userId)
     {
