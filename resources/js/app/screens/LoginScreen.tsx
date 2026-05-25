@@ -117,6 +117,7 @@ export default function LoginScreen() {
   const [country, setCountry] = useState('');
   const [city, setCity] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<{ [k: string]: string }>({});
   const [shake, setShake] = useState<{ [k: string]: boolean }>({});
   const [showVerificationModal, setShowVerificationModal] = useState(false);
@@ -366,7 +367,7 @@ export default function LoginScreen() {
                 </motion.div>
 
                 {/* Confirm password */}
-                <AnimatePresence>
+                {/* <AnimatePresence>
                   {isRegister && (
                     <motion.div key="cpw"
                       initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
@@ -377,6 +378,38 @@ export default function LoginScreen() {
                           onChange={e => { setPasswordConfirmation(e.target.value); if (errors.passwordConfirmation) setErrors(p => ({ ...p, passwordConfirmation: '' })); }}
                           className={`h-11 text-sm rounded-xl border-gray-200 bg-white/90 focus:border-purple-400 ${errors.passwordConfirmation ? 'border-red-400' : ''}`}
                         />
+                        {errors.passwordConfirmation && <p className="text-xs text-red-500 mt-1">{errors.passwordConfirmation}</p>}
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence> */}
+
+
+                <AnimatePresence>
+                  {isRegister && (
+                    <motion.div key="cpw" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                      <motion.div animate={shakeAnim(shake.passwordConfirmation)}>
+                        <div className="relative">
+                          <Input
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            value={passwordConfirmation}
+                            placeholder="Confirm Password"
+                            onChange={e => { 
+                              setPasswordConfirmation(e.target.value); 
+                              if (errors.passwordConfirmation) setErrors(p => ({ ...p, passwordConfirmation: '' })); 
+                            }}
+                            className={`h-11 text-sm rounded-xl border-gray-200 bg-white/90 pr-14 focus:border-purple-400 ${errors.passwordConfirmation ? 'border-red-400' : ''}`}
+                          />
+                          {passwordConfirmation && (
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-purple-600 hover:text-purple-800"
+                            >
+                              {showConfirmPassword ? 'Hide' : 'Show'}
+                            </button>
+                          )}
+                        </div>
                         {errors.passwordConfirmation && <p className="text-xs text-red-500 mt-1">{errors.passwordConfirmation}</p>}
                       </motion.div>
                     </motion.div>

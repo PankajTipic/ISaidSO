@@ -191,8 +191,24 @@ export function PredictionDetailScreen() {
   const handleVote = async () => {
     if (!selectedAnswer) { toast.error('Please select an answer'); return; }
     setSubmitting(true);
+
+    // Map the UI label (e.g. 'YES') to the casing stored in the DB (e.g. 'Yes')
+    let finalAnswer = selectedAnswer.trim();
+    if (prediction?.options && Array.isArray(prediction.options)) {
+      const match = prediction.options.find(
+        (opt: string) => opt.toLowerCase() === selectedAnswer.toLowerCase()
+      );
+      if (match) {
+        finalAnswer = match;
+      } else {
+        finalAnswer = selectedAnswer.charAt(0).toUpperCase() + selectedAnswer.slice(1).toLowerCase();
+      }
+    } else {
+      finalAnswer = selectedAnswer.charAt(0).toUpperCase() + selectedAnswer.slice(1).toLowerCase();
+    }
+
     try {
-      await postAuth('/api/answers', { question_id: id, answer: selectedAnswer.trim() });
+      await postAuth('/api/answers', { question_id: id, answer: finalAnswer });
       toast.success('Vote submitted successfully!');
       setSelectedAnswer('');
       const refreshed = await getAuth(`/api/predictions/${id}`);
@@ -319,10 +335,10 @@ export function PredictionDetailScreen() {
             {currentUser?.id === prediction?.user_id && (
               <Dialog open={editOpen} onOpenChange={setEditOpen}>
                 <DialogTrigger asChild>
-                  <button onClick={handleOpenEdit} className="px-3 py-1.5 md:px-5 md:py-2 rounded-xl md:rounded-2xl text-[11px] md:text-[13px] font-black uppercase tracking-widest border bg-white border-gray-100 hover:bg-gray-50 flex items-center gap-1.5 md:gap-2 shadow-sm transition-all active:scale-95">
+                  {/* <button onClick={handleOpenEdit} className="px-3 py-1.5 md:px-5 md:py-2 rounded-xl md:rounded-2xl text-[11px] md:text-[13px] font-black uppercase tracking-widest border bg-white border-gray-100 hover:bg-gray-50 flex items-center gap-1.5 md:gap-2 shadow-sm transition-all active:scale-95">
                     <Edit2 size={14} className="text-purple-500" />
                     EDIT
-                  </button>
+                  </button> */}
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[600px] bg-[#f8f8f6] border-none p-0 overflow-hidden rounded-[2rem] md:rounded-[2.5rem] shadow-2xl">
                   <div className="p-5 md:p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
@@ -708,7 +724,7 @@ export function PredictionDetailScreen() {
               </div>
 
               {/* Broadcast */}
-              <div className="rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 border border-gray-100 bg-white shadow-xl overflow-hidden relative group" style={{ borderLeft: `6px solid #f59e0b` }}>
+              {/* <div className="rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 border border-gray-100 bg-white shadow-xl overflow-hidden relative group" style={{ borderLeft: `6px solid #f59e0b` }}>
                 <div className="flex items-center gap-3 mb-6 md:mb-8">
                   <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-amber-50 flex items-center justify-center">
                     <Send size={16} className="text-amber-600" />
@@ -728,7 +744,7 @@ export function PredictionDetailScreen() {
                     </button>
                   ))}
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
         </motion.div>
