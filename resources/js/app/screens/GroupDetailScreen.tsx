@@ -99,7 +99,7 @@ export function GroupDetailScreen() {
             }
         } catch (error: any) {
             console.error('Failed to fetch group details', error);
-            toast.error('Failed to load group details');
+            toast.error('Failed to load community details');
             if (error.status === 403 || error.status === 404) {
                 navigate('/groups');
             }
@@ -191,7 +191,7 @@ export function GroupDetailScreen() {
             toast.success(`You have left ${group.name}`);
             navigate('/groups');
         } catch (err: any) {
-            toast.error(err?.response?.data?.message || 'Failed to leave group');
+            toast.error(err?.response?.data?.message || 'Failed to leave community');
         } finally {
             setLeaving(false);
         }
@@ -207,7 +207,7 @@ export function GroupDetailScreen() {
                 <TopNav />
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                     <Loader2 className="w-10 h-10 text-[#a855f7] animate-spin" />
-                    <p className="text-slate-500 font-medium text-sm">Loading group...</p>
+                    <p className="text-slate-500 font-medium text-sm">Loading community...</p>
                 </div>
                 <MobileNav />
             </div>
@@ -230,9 +230,9 @@ export function GroupDetailScreen() {
                         <ArrowLeft size={18} />
                     </button>
                     <div>
-                        <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Group Detail</h2>
+                        <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Community Detail</h2>
                         <button onClick={() => navigate('/groups')} className="text-base font-bold text-slate-900 hover:text-[#a855f7] transition-colors leading-none">
-                            Back to Groups
+                            Back to Community
                         </button>
                     </div>
                 </div>
@@ -488,7 +488,7 @@ export function GroupDetailScreen() {
                                     </div>
                                     <h4 className="text-2xl font-black text-slate-800 mb-2">No questions yet</h4>
                                     <p className="text-slate-500 max-w-sm mx-auto px-4 font-medium mb-10">
-                                        This group doesn't have any active predictions or polls yet.
+                                        This community doesn't have any active predictions or polls yet.
                                     </p>
                                     <Button
                                         className="rounded-2xl h-14 px-10 bg-violet-600 shadow-xl shadow-violet-200 font-bold hover:scale-[1.05] transition-transform"
@@ -650,7 +650,7 @@ export function GroupDetailScreen() {
                             </div>
 
                             <p className="text-muted-foreground text-sm md:text-base mb-8">
-                                Are you sure you want to remove this member from the group?
+                                Are you sure you want to remove this member from the community?
                             </p>
 
                             <div className="flex gap-3">

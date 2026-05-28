@@ -750,7 +750,7 @@ export function GroupsScreen() {
             <div>
               <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3 text-foreground tracking-tight">
                 <Users size={20} className="text-primary md:w-8 md:h-8" />
-                Groups
+                Community
               </h1>
               <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-lg">
                 Join communities and make predictions together
@@ -776,18 +776,18 @@ export function GroupsScreen() {
                         <Plus size={24} className="text-white" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-black text-[#111111] uppercase tracking-tighter">Create Group</h2>
+                        <h2 className="text-xl font-black text-[#111111] uppercase tracking-tighter">Create Community</h2>
                         <p className="text-[12px] text-[#667781] font-bold uppercase tracking-widest">Build your community</p>
                       </div>
                     </div>
 
                     <div className="space-y-4">
-                      <SectionCard title="Group Information" icon={Users} color="#a855f7">
+                      <SectionCard title="Community Information" icon={Users} color="#a855f7">
                         <div className="space-y-4">
                           <div className="space-y-2">
-                            <SectionHeading>Group Name</SectionHeading>
+                            <SectionHeading>Community Name</SectionHeading>
                             <Input
-                              placeholder="Enter group name"
+                              placeholder="Enter community name"
                               value={newGroupName}
                               onChange={(e) => setNewGroupName(e.target.value)}
                               className="h-14 rounded-2xl border-gray-100 bg-gray-50/50 font-bold focus:ring-purple-500"
@@ -796,7 +796,7 @@ export function GroupsScreen() {
                           <div className="space-y-2">
                             <SectionHeading>Description</SectionHeading>
                             <Textarea
-                              placeholder="What is this group about?"
+                              placeholder="What is this community about?"
                               value={newGroupDescription}
                               onChange={(e) => setNewGroupDescription(e.target.value)}
                               className="min-h-[100px] rounded-2xl border-gray-100 bg-gray-50/50 font-bold focus:ring-purple-500"
@@ -811,7 +811,7 @@ export function GroupsScreen() {
                               className="w-5 h-5 rounded-lg border-gray-300 text-purple-600 focus:ring-purple-500"
                             />
                             <Label htmlFor="private" className="font-bold text-[13px] text-[#111111] cursor-pointer">
-                              Make this group private
+                              Make this community private
                             </Label>
                           </div>
                         </div>
@@ -831,7 +831,7 @@ export function GroupsScreen() {
                         className="flex-[2] h-14 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-purple-100"
                         style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
                       >
-                        Create Group
+                        Create Community
                       </Button>
                     </div>
                   </div>
@@ -858,7 +858,7 @@ export function GroupsScreen() {
                     <Input
                       autoFocus
                       type="text"
-                      placeholder="Search groups..."
+                      placeholder="Search communities..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="h-9 pl-9 pr-8 bg-muted/30 border-muted-foreground/20 focus:bg-background text-sm"
@@ -913,7 +913,7 @@ export function GroupsScreen() {
                           data-[state=active]:shadow-[#a855f7]/20
                         "
                       >
-                        My Groups
+                        My Communities
                       </TabsTrigger>
                     </TabsList>
                   </>
@@ -953,7 +953,7 @@ export function GroupsScreen() {
                       data-[state=active]:shadow-md
                     "
                   >
-                    My Groups
+                    My Communities
                   </TabsTrigger>
                 </TabsList>
 
@@ -961,7 +961,7 @@ export function GroupsScreen() {
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} />
                   <Input
                     type="text"
-                    placeholder="Search groups..."
+                    placeholder="Search communities..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="h-10 pl-9 bg-muted/30 border-muted-foreground/20 focus:bg-background transition-all text-sm"
@@ -979,13 +979,13 @@ export function GroupsScreen() {
                 animate={{ opacity: 1 }}
               >
                 {loading ? (
-                  <div className="text-center py-12 md:py-20 text-xs md:text-lg">Loading groups...</div>
+                  <div className="text-center py-12 md:py-20 text-xs md:text-lg">Loading communities...</div>
                 ) : filteredGroups.length > 0 ? (
                   filteredGroups.map((group, index) => renderGroupCard(group, index, false))
                 ) : (
                   <div className="text-center py-12 md:py-20 bg-muted/10 rounded-2xl border border-dashed border-border">
                     <Search className="mx-auto h-8 w-8 md:h-10 md:w-10 text-muted-foreground/50 mb-3" />
-                    <p className="text-muted-foreground font-medium text-xs md:text-lg">No groups found</p>
+                    <p className="text-muted-foreground font-medium text-xs md:text-lg">No communities found</p>
                   </div>
                 )}
               </motion.div>
@@ -999,11 +999,11 @@ export function GroupsScreen() {
                 animate={{ opacity: 1 }}
               >
                 {loading ? (
-                  <div className="text-center py-12 md:py-20 text-xs md:text-lg">Loading groups...</div>
+                  <div className="text-center py-12 md:py-20 text-xs md:text-lg">Loading communities...</div>
                 ) : groups.length === 0 ? (
                   <div className="text-center py-12 md:py-20 bg-muted/10 rounded-2xl border border-dashed border-border p-4">
                     <Users size={32} className="mx-auto mb-3 text-muted-foreground/50 md:w-10 md:h-10" />
-                    <h3 className="font-semibold text-sm md:text-lg mb-1">No Groups Joined</h3>
+                    <h3 className="font-semibold text-sm md:text-lg mb-1">No Communities Joined</h3>
                     <p className="text-muted-foreground mb-4 text-[10px] md:text-sm max-w-sm mx-auto">
                       Explore the community to find where you belong.
                     </p>
@@ -1012,7 +1012,7 @@ export function GroupsScreen() {
                       variant="outline"
                       className="glass-card h-8 md:h-11 text-[10px] md:text-sm px-4 md:px-6"
                     >
-                      Discover Groups
+                      Discover Communities
                     </Button>
                   </div>
                 ) : (

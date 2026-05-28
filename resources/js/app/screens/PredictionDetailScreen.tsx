@@ -70,29 +70,23 @@ function getResultLabel(totalVotes: number, agreeP: number, disagreeP: number, v
   if (totalVotes === 0) return 'No votes yet';
   const margin = Math.abs(agreeP - disagreeP);
   if (vagueP > agreeP && vagueP > disagreeP) {
-    if (vagueP >= 85) return `Overwhelmingly unclear (${vagueP}%)`;
-    if (vagueP >= 60) return `Clearly unclear (${vagueP}% unclear)`;
-    if (vagueP >= 45) return `Leaning unclear (${vagueP}% unclear)`;
+    return `Vague`;
   }
-  if (margin <= 5 && vagueP < 40) return `Too close to call (${agreeP}% vs ${disagreeP}%)`;
+  if (margin <= 5 && vagueP < 40) return `Too close to call`;
   if (margin <= 3) return 'Highly uncertain (votes are split)';
   if (agreeP > disagreeP && agreeP > vagueP) {
-    if (agreeP >= 85) return `Overwhelming YES (${agreeP}%)`;
-    if (agreeP >= 60) return `Clear YES (${agreeP}% vs ${disagreeP}%)`;
-    return `Leaning YES (${agreeP}% vs ${disagreeP}%)`;
-  }
+    return `Successful`;
+  } 
   if (disagreeP > agreeP && disagreeP > vagueP) {
-    if (disagreeP >= 85) return `Overwhelming NO (${disagreeP}%)`;
-    if (disagreeP >= 60) return `Clear NO (${disagreeP}% vs ${agreeP}%)`;
-    return `Leaning NO (${disagreeP}% vs ${agreeP}%)`;
+    return `Failure`;
   }
-  return `Too close to call (${agreeP}% vs ${disagreeP}%)`;
+  return `Too close to call`;
 }
 
 function getOutcomeFromLabel(label: string): 'yes' | 'no' | 'vague' {
   const l = label.toLowerCase();
-  if (l.includes('yes')) return 'yes';
-  if (l.includes('no')) return 'no';
+  if (l.includes('successful') || l.includes('yes')) return 'yes';
+  if (l.includes('failure') || l.includes('no')) return 'no';
   return 'vague';
 }
 
@@ -105,6 +99,7 @@ export function PredictionDetailScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [categories, setCategories] = useState<any[]>([]);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Edit State
   const [editOpen, setEditOpen] = useState(false);
@@ -478,10 +473,18 @@ export function PredictionDetailScreen() {
                 <div className="relative z-10 flex items-center justify-between p-6 md:p-12 w-full gap-4">
                   <div className="space-y-4 md:space-y-6 flex-1 text-left">
                     <div className="space-y-1 md:space-y-2">
-                      <p className="text-[10px] md:text-[12px] font-black text-[#667781] uppercase tracking-[0.3em] opacity-80">Prediction Question</p>
-                      <h1 className="text-[18px] md:text-[32px] font-black leading-tight text-[#111111] tracking-tighter uppercase">
-                        {prediction.questions || 'Prediction Question'}
-                      </h1>
+                      <p className="text-[10px] md:text-[12px] font-black text-[#667781] uppercase tracking-[0.3em] opacity-80">Prediction</p>
+                      <div>
+                        <h1 className={`text-[16px] md:text-[18px] font-medium leading-relaxed text-[#111111] normal-case transition-all ${!isExpanded ? 'line-clamp-4' : ''}`}>
+                          {prediction.questions || 'Prediction'}
+                        </h1>
+                        <button 
+                          onClick={() => setIsExpanded(!isExpanded)}
+                          className="text-purple-600 text-sm font-bold mt-1 hover:underline flex items-center"
+                        >
+                          {isExpanded ? 'Show less' : '...'}
+                        </button>
+                      </div>
                     </div>
                     
                     <div className="flex items-center gap-2.5">
@@ -492,12 +495,12 @@ export function PredictionDetailScreen() {
                       <span className="text-[14px] md:text-[16px] font-black text-[#667781] uppercase tracking-wider">@{prediction.user?.username || 'user'}</span>
                     </div>
                   </div>
-                  <div className="relative shrink-0 scale-75 md:scale-100">
-                    <img src={bannerImage} alt="Category Icon" className="w-32 h-32 md:w-48 md:h-48 object-contain drop-shadow-2xl animate-in zoom-in duration-1000" />
+                  <div className="relative shrink-0 flex items-center justify-center">
+                    <img src={bannerImage} alt="Category Icon" className="w-24 h-24 md:w-36 md:h-36 object-contain drop-shadow-2xl animate-in zoom-in duration-1000" />
                   </div>
                   {showResultPill && (
                     <div className={`absolute top-4 right-4 md:top-6 md:right-6 px-3 py-1 rounded-xl border font-black text-[10px] md:text-[12px] shadow-sm ${pillConfig.bg} ${pillConfig.border} ${pillConfig.text} animate-in slide-in-from-top-4 duration-500 uppercase tracking-widest`}>
-                      {pillConfig.label} WON
+                      {pillConfig.label} 
                     </div>
                   )}
                 </div>
@@ -558,7 +561,7 @@ export function PredictionDetailScreen() {
                     <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-blue-50 flex items-center justify-center">
                       <Target size={16} className="text-blue-500" />
                     </div>
-                    <h3 className="text-[12px] md:text-[14px] font-black text-[#111111] uppercase tracking-[0.2em]">{isClosed ? 'Official Verdict' : 'Cast Forecast'}</h3>
+                    <h3 className="text-[12px] md:text-[14px] font-black text-[#111111] uppercase tracking-[0.2em]">{isClosed ? 'Official Verdict' : 'Validate'}</h3>
                   </div>
 
                   {isClosed ? (
@@ -583,28 +586,37 @@ export function PredictionDetailScreen() {
                     </div>
                   ) : (
                     <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-stretch">
-                      <div className="flex-1 grid grid-cols-3 gap-3 md:gap-4">
-                        {[
-                          { label: 'YES', icon: <CheckCircle2 className="text-emerald-500" />, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                          { label: 'NO', icon: <XCircle className="text-rose-500" />, color: 'text-rose-500', bg: 'bg-rose-50' },
-                          { label: 'VAGUE', icon: <HelpCircle className="text-amber-500" />, color: 'text-amber-500', bg: 'bg-amber-50' }
-                        ].map((opt) => (
-                          <button
-                            key={opt.label}
-                            onClick={() => setSelectedAnswer(opt.label)}
-                            className={`flex flex-col items-center justify-center gap-3 md:gap-5 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2.5rem] border-2 transition-all shadow-md group active:scale-95 ${selectedAnswer === opt.label
-                                ? "bg-[#111111] text-white border-[#111111] scale-[1.05] z-10"
-                                : "bg-white border-gray-100 hover:border-gray-200 hover:shadow-lg"
-                              }`}
-                          >
-                            <div className={`w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-[1.5rem] flex items-center justify-center transition-all ${selectedAnswer === opt.label ? 'bg-white/10 rotate-12' : opt.bg + ' group-hover:scale-110'}`}>
-                              <div className="scale-75 md:scale-100">
-                                {opt.icon}
+                      <div className="flex-1 flex flex-col gap-3">
+                        <div className="grid grid-cols-3 gap-3 md:gap-4">
+                          {[
+                            { label: 'YES', icon: <CheckCircle2 className="text-emerald-500" />, color: 'text-emerald-500', bg: 'bg-emerald-50', tooltip: 'Vote YES if you agree' },
+                            { label: 'NO', icon: <XCircle className="text-rose-500" />, color: 'text-rose-500', bg: 'bg-rose-50', tooltip: 'Vote NO if you disagree' },
+                            { label: 'VAGUE', icon: <HelpCircle className="text-amber-500" />, color: 'text-amber-500', bg: 'bg-amber-50', tooltip: 'Vote VAGUE if unclear' }
+                          ].map((opt) => (
+                            <button
+                              key={opt.label}
+                              onClick={() => setSelectedAnswer(opt.label)}
+                              className={`flex flex-col items-center justify-center gap-3 md:gap-5 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2.5rem] border-2 transition-all shadow-md group active:scale-95 ${selectedAnswer === opt.label
+                                  ? "bg-[#111111] text-white border-[#111111] scale-[1.05] z-10"
+                                  : "bg-white border-gray-100 hover:border-gray-200 hover:shadow-lg"
+                                }`}
+                            >
+                              <div className={`w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-[1.5rem] flex items-center justify-center transition-all ${selectedAnswer === opt.label ? 'bg-white/10 rotate-12' : opt.bg + ' group-hover:scale-110'}`}>
+                                <div className="scale-75 md:scale-100">
+                                  {opt.icon}
+                                </div>
                               </div>
-                            </div>
-                            <span className={`text-[12px] md:text-[14px] font-black tracking-[0.3em] ${selectedAnswer === opt.label ? 'text-white' : opt.color}`}>{opt.label}</span>
-                          </button>
-                        ))}
+                              <span className={`text-[12px] md:text-[14px] font-black tracking-[0.3em] ${selectedAnswer === opt.label ? 'text-white' : opt.color}`}>{opt.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                        {selectedAnswer && (
+                          <div className="text-center w-full animate-in fade-in slide-in-from-top-2">
+                            <span className="text-[12px] font-bold text-[#667781] bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 inline-block shadow-sm">
+                              {selectedAnswer === 'YES' ? 'Vote YES if you agree' : selectedAnswer === 'NO' ? 'Vote NO if you disagree' : 'Vote VAGUE if unclear'}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <Button
                         className="h-16 md:h-auto md:w-56 rounded-[1.5rem] md:rounded-[2.5rem] text-[16px] md:text-[18px] font-black tracking-[0.3em] shadow-2xl flex flex-row md:flex-col items-center justify-center gap-3 p-4 md:p-8 transition-all hover:scale-[1.05] active:scale-[0.98] border-none group"
@@ -649,15 +661,55 @@ export function PredictionDetailScreen() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 md:gap-5 p-4 md:p-5 rounded-[1.5rem] md:rounded-[1.8rem] bg-purple-50/40 border border-purple-50 group hover:bg-purple-50 transition-all">
-                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-white shadow-md flex items-center justify-center shrink-0 border border-purple-100">
-                      <Users size={22} className="md:w-6 md:h-6 text-purple-500" />
-                    </div>
-                    <div className="flex-1 flex justify-between items-center">
-                      <p className="text-[13px] md:text-[14px] font-black text-[#111111] uppercase tracking-wide">Voters</p>
-                      <p className="text-[20px] md:text-[26px] font-black text-[#111111]">{totalValidVotes}</p>
-                    </div>
-                  </div>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button className="w-full flex items-center gap-4 md:gap-5 p-4 md:p-5 rounded-[1.5rem] md:rounded-[1.8rem] bg-purple-50/40 border border-purple-50 group hover:bg-purple-50 transition-all cursor-pointer">
+                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-white shadow-md flex items-center justify-center shrink-0 border border-purple-100">
+                          <Users size={22} className="md:w-6 md:h-6 text-purple-500" />
+                        </div>
+                        <div className="flex-1 flex justify-between items-center text-left">
+                          <p className="text-[13px] md:text-[14px] font-black text-[#111111] uppercase tracking-wide">Validated By</p>
+                          <p className="text-[20px] md:text-[26px] font-black text-[#111111]">{totalValidVotes}</p>
+                        </div>
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[400px] bg-white border-none p-0 overflow-hidden rounded-[2rem] shadow-2xl">
+                      <div className="p-6">
+                        <DialogHeader>
+                          <DialogTitle className="text-lg font-black text-[#111111] uppercase tracking-tighter mb-4">
+                            Validated By
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+                          {answers.length > 0 ? (
+                            answers.map((answer: any, idx: number) => (
+                              <div key={idx} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors">
+                                <Avatar className="w-10 h-10 border border-gray-100">
+                                  <AvatarImage src={answer.user?.avatar_url} />
+                                  <AvatarFallback className="font-bold bg-purple-50 text-purple-600">
+                                    {answer.user?.username?.charAt(0)?.toUpperCase() || 'U'}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                  <p className="text-sm font-bold text-[#111111]">@{answer.user?.username || 'user'}</p>
+                                  <p className="text-xs font-semibold text-gray-500">{answer.user?.name || ''}</p>
+                                </div>
+                                <span className={`text-xs font-black uppercase px-2 py-1 rounded-lg ${
+                                  answer.answer?.toLowerCase() === 'yes' ? 'bg-emerald-50 text-emerald-600' :
+                                  answer.answer?.toLowerCase() === 'no' ? 'bg-rose-50 text-rose-600' :
+                                  'bg-amber-50 text-amber-600'
+                                }`}>
+                                  {answer.answer}
+                                </span>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-center text-sm font-bold text-gray-400 py-4">No voters yet</p>
+                          )}
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
 
                   <div className="flex items-center gap-4 md:gap-5 p-4 md:p-5 rounded-[1.5rem] md:rounded-[1.8rem] bg-emerald-50/40 border border-emerald-50 group hover:bg-emerald-50 transition-all">
                     <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-white shadow-md flex items-center justify-center shrink-0 border border-emerald-100">

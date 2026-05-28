@@ -85,13 +85,27 @@ export function TopNav({
     return null;
   }
 
+  // const navItems = [
+  //   { icon: Home, label: 'Home', path: '/home' },
+  //   { icon: TrendingUp, label: 'Leaderboard', path: '/leaderboard' },
+  //   { icon: Users, label: 'Community', path: '/groups' },
+  //   { icon: User, label: 'Profile', path: '/profile' },
+  //   { icon: User, label: 'About', path: '/about' },
+  // ].filter(item => !(isGuest && item.label === 'Leaderboard'));
+
   const navItems = [
-    { icon: Home, label: 'Home', path: '/home' },
-    { icon: TrendingUp, label: 'Leaderboard', path: '/leaderboard' },
-    { icon: Users, label: 'Groups', path: '/groups' },
-    { icon: User, label: 'Profile', path: '/profile' },
-    { icon: User, label: 'About', path: '/about' },
-  ].filter(item => !(isGuest && item.label === 'Leaderboard'));
+  { icon: Home, label: 'Home', path: '/home' },
+  { icon: TrendingUp, label: 'Leaderboard', path: '/leaderboard' },
+  { icon: Users, label: 'Community', path: '/groups' },
+  { icon: User, label: 'Profile', path: '/profile' },
+  { icon: User, label: 'About', path: '/about' },
+].filter(
+  item =>
+    !(
+      isGuest &&
+      ['Leaderboard', 'Community', 'Profile'].includes(item.label)
+    )
+);
 
   return (
     <>
