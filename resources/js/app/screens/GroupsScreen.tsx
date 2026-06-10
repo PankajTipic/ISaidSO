@@ -746,7 +746,7 @@ export function GroupsScreen() {
         <div className="max-w-5xl mx-auto px-2 md:px-4 py-4 md:py-8">
 
           {/* Header */}
-          <div className="flex items-center justify-between mb-4 md:mb-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 md:mb-8">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3 text-foreground tracking-tight">
                 <Users size={20} className="text-primary md:w-8 md:h-8" />
@@ -762,11 +762,11 @@ export function GroupsScreen() {
                 <DialogTrigger asChild>
                   <Button
                     size="sm"
-                    className="h-9 md:h-11 px-4 md:px-6 shadow-lg rounded-xl font-semibold text-sm"
+                    className="h-9 md:h-11 px-4 md:px-6 shadow-lg rounded-xl font-semibold text-sm self-start md:self-auto"
                     style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
                   >
                     <Plus size={14} className="mr-1.5 md:mr-2 md:w-5 md:h-5" />
-                    Create
+                    Start Community
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[500px] bg-[#f8f8f6] border-none p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">

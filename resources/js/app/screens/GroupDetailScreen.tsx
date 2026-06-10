@@ -26,7 +26,8 @@ interface GroupMember {
 
 interface GroupQuestion {
     id: number;
-    text: string;
+    // text: string;
+    questions: string;
     module_type: 'prediction' | 'poll';
     status: string;
     end_date: string;
@@ -443,7 +444,7 @@ export function GroupDetailScreen() {
                                                 </div>
 
                                                 <h4 className="font-bold text-lg mb-4 leading-tight text-slate-800 group-hover:text-[#a855f7] transition-colors line-clamp-2 min-h-[3rem]">
-                                                    {q.text}
+                                                    {/* {q.text}  */} {q.questions || 'No question text'}
                                                 </h4>
 
                                                 <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100">

@@ -38,6 +38,8 @@ public function questionsByUserId()
         }
 
         $questions = Question::where('user_id', $userId)
+
+        ->where('is_archived', false)
             ->with(['field', 'answerType'])
 
             // ✅ Load answers with user
@@ -146,6 +148,7 @@ public function questionsByUserId()
     public function publicIndex()
     {
         $questions = Question::where('visibility', 'public')
+        ->where('is_archived', false)
             ->with(['field', 'answerType', 'user', 'answers'])
             ->withCount('answers')
             ->latest()
@@ -160,7 +163,9 @@ public function questionsByUserId()
 
     public function showForAnswer($id)
     {
-        $question = Question::with(['field', 'answerType', 'user', 'answers'])
+        // $question = Question::
+        $question = Question::where('is_archived', false)
+        ->with(['field', 'answerType', 'user', 'answers'])
             ->withCount('answers')
             ->findOrFail($id);
 

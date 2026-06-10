@@ -18,17 +18,8 @@ class PredictionController extends Controller
         $userId = Auth::guard('sanctum')->id();
 
         $query = Question::where('module_type', 'prediction')
-            ->where(function ($q) use ($userId) {
-                $q->where('visibility', 'public');
-                if ($userId) {
-                    $q->orWhere('user_id', $userId)
-                      ->orWhereHas('groups', function ($g) use ($userId) {
-                          $g->whereHas('members', function ($m) use ($userId) {
-                              $m->where('user_id', $userId);
-                          });
-                      });
-                }
-            })
+            ->where('visibility', 'public')
+            ->where('is_archived', false)
             ->with(['field', 'user', 'answerType'])
             ->withCount([
             'answers',
@@ -244,11 +235,14 @@ $prediction->update(['correct_answer' => $correctAnswer, 'status' => 'closed']);
         ->findOrFail($id);
 
     // Private question access check
-    if ($prediction->visibility === 'private' && $prediction->user_id !== Auth::id()) {
-        $userId = Auth::id();
+    $userId = auth('sanctum')->id();
+    if ($prediction->visibility === 'private' && $prediction->user_id !== $userId) {
         $isSharedWithUser = $prediction->groups()
-            ->whereHas('members', function ($q) use ($userId) {
-                $q->where('user_id', $userId);
+            ->where(function ($query) use ($userId) {
+                $query->where('groups.user_id', $userId)
+                      ->orWhereHas('members', function ($q) use ($userId) {
+                          $q->where('users.id', $userId);
+                      });
             })->exists();
 
         if (!$isSharedWithUser) {
@@ -257,9 +251,11 @@ $prediction->update(['correct_answer' => $correctAnswer, 'status' => 'closed']);
     }
 
     // ====================== AUTOMATIC RESULT CALCULATION ======================
-    $isClosed = $prediction->end_date && now()->gt($prediction->end_date);
+    // Result is calculated after voting period ends (voting_end_date or end_date as fallback)
+    $votingDeadline = $prediction->voting_end_date ?? $prediction->end_date;
+    $isVotingClosed = $votingDeadline && now()->gt($votingDeadline);
 
-    if ($isClosed && empty($prediction->correct_answer)) {
+    if ($isVotingClosed && (empty($prediction->correct_answer) || $prediction->correct_answer === 'N/A')) {
         $yesCount = $prediction->answers->where('answer', 'Yes')->count();
         $noCount  = $prediction->answers->where('answer', 'No')->count();
         $vagueCount = $prediction->answers->where('answer', 'Vague')->count();

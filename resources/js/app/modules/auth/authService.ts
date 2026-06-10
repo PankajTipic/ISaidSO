@@ -80,6 +80,16 @@ const authService = {
     },
     login: async (userData: any) => {
         const response = await api.post('/login', userData);
+        // Only store tokens when 2FA is NOT required (normal users)
+        // For admins, requires_2fa: true is returned — no tokens yet
+        if (response.data && !response.data.requires_2fa) {
+            localStorage.setItem('access_token', response.data.access_token);
+            localStorage.setItem('refresh_token', response.data.refresh_token);
+        }
+        return response.data;
+    },
+    verify2fa: async (payload: { email: string; otp: string }) => {
+        const response = await api.post('/auth/verify-2fa', payload);
         if (response.data) {
             localStorage.setItem('access_token', response.data.access_token);
             localStorage.setItem('refresh_token', response.data.refresh_token);
@@ -91,9 +101,6 @@ const authService = {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
-        sessionStorage.removeItem('dev_auth_verified');
-        // Signal DevGuard to re-lock immediately
-        window.dispatchEvent(new Event('dev-auth-cleared'));
     },
     getUser: async () => {
         const response = await api.get('/user');

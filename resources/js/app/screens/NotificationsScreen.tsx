@@ -273,7 +273,7 @@ export function NotificationsScreen() {
                                                     </p>
                                                     {notif.data.group_name && (
                                                         <p className="text-xs text-slate-500 mt-0.5">
-                                                            Group: <span className="font-semibold text-slate-700">{notif.data.group_name}</span>
+                                                            Community: <span className="font-semibold text-slate-700">{notif.data.group_name}</span>
                                                         </p>
                                                     )}
                                                     <p className="text-[11px] text-slate-400 mt-1">{timeAgo(notif.created_at)}</p>

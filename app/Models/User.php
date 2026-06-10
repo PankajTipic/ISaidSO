@@ -52,7 +52,37 @@ class User extends Authenticatable
      */
     protected $appends = [
         'avatar_url',
+        'total_forecasts',
+        'total_points',
+        'accuracy',
     ];
+
+    public function getTotalForecastsAttribute()
+    {
+        return $this->questions()->where('module_type', 'prediction')->count();
+    }
+
+    public function getTotalPointsAttribute()
+    {
+        return $this->points()->sum('points');
+    }
+
+    public function getAccuracyAttribute()
+    {
+        $totalResolved = $this->answers()->whereHas('question', function ($q) {
+            $q->whereNotNull('correct_answer')->where('correct_answer', '!=', '');
+        })->count();
+
+        if ($totalResolved === 0) {
+            return 0;
+        }
+
+        $correct = $this->answers()->whereHas('question', function ($q) {
+            $q->whereColumn('questions.correct_answer', 'answers.answer');
+        })->count();
+
+        return round(($correct / $totalResolved) * 100);
+    }
 
     /**
      * Get the avatar URL.
@@ -141,4 +171,8 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(User::class, 'followers', 'follower_id', 'following_id');
     }
+
+
+
+
 }

@@ -7,16 +7,40 @@ use Illuminate\Support\Facades\Auth;
 
 class NotificationController extends Controller
 {
-    public function index()
-    {
-        $notifications = Auth::user()->notifications()->get();
-        $unreadCount = Auth::user()->unreadNotifications()->count();
+    // public function index()
+    // {
+    //     $notifications = Auth::user()->notifications()->get();
+    //     $unreadCount = Auth::user()->unreadNotifications()->count();
 
-        return response()->json([
-            'notifications' => $notifications,
-            'unreadCount' => $unreadCount
-        ]);
-    }
+    //     return response()->json([
+    //         'notifications' => $notifications,
+    //         'unreadCount' => $unreadCount
+    //     ]);
+    // }
+
+   
+public function index()
+{
+    $user = Auth::user();
+    $notifications = $user->notifications()
+        ->latest()
+        ->get();
+
+    $unreadCount = $user->unreadNotifications()->count();
+
+    return response()->json([
+        'notifications' => $notifications->map(function ($n) {
+            return [
+                'id' => $n->id,
+                'type' => $n->type,
+                'data' => $n->data,
+                'read_at' => $n->read_at,
+                'created_at' => $n->created_at,
+            ];
+        }),
+        'unreadCount' => $unreadCount
+    ]);
+}
 
     public function markAsRead($id)
     {

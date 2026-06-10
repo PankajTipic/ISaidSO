@@ -36,22 +36,43 @@ class AdminController extends Controller
     /**
      * Block/Unblock a user.
      */
+    // public function toggleBlock($id)
+    // {
+    //     $user = User::findOrFail($id);
+
+    //     if ($user->id === Auth::id()) {
+    //         return response()->json(['message' => 'You cannot block yourself.'], 400);
+    //     }
+
+    //     $user->is_blocked = !$user->is_blocked;
+    //     $user->save();
+
+    //     return response()->json([
+    //         'message' => $user->is_blocked ? 'User blocked successfully.' : 'User unblocked successfully.',
+    //         'user' => $user
+    //     ]);
+    // }
+
     public function toggleBlock($id)
-    {
-        $user = User::findOrFail($id);
+{
+    $user = User::findOrFail($id);
 
-        if ($user->id === Auth::id()) {
-            return response()->json(['message' => 'You cannot block yourself.'], 400);
-        }
-
-        $user->is_blocked = !$user->is_blocked;
-        $user->save();
-
-        return response()->json([
-            'message' => $user->is_blocked ? 'User blocked successfully.' : 'User unblocked successfully.',
-            'user' => $user
-        ]);
+    if ($user->id === Auth::id()) {
+        return response()->json(['message' => 'You cannot block yourself.'], 400);
     }
+
+    $user->is_blocked = !$user->is_blocked;
+    $user->save();
+
+    // Archive all user's questions when blocked, unarchive when unblocked
+    Question::where('user_id', $user->id)
+        ->update(['is_archived' => $user->is_blocked]);
+
+    return response()->json([
+        'message' => $user->is_blocked ? 'User blocked successfully.' : 'User unblocked successfully.',
+        'user' => $user
+    ]);
+}
 
     /**
      * List all predictions.
@@ -77,17 +98,7 @@ class AdminController extends Controller
         return response()->json($polls);
     }
 
-    /**
-     * List all groups.
-     */
-    // public function groups()
-    // {
-    //     $groups = Group::with(['user'])
-    //         ->withCount('members')
-    //         ->latest()
-    //         ->paginate(15);
-    //     return response()->json($groups);
-    // }
+   
 
     public function groups()
 {
@@ -121,15 +132,7 @@ public function leaveGroup($id)
     return response()->json(['message' => 'Successfully left the group']);
 }
 
-    /**
-     * Get details of a group including members.
-     */
-    // public function groupDetails($id)
-    // {
-    //     $group = Group::with(['user', 'members'])->withCount('members')->findOrFail($id);
-    //     return response()->json($group);
-    // }
-
+   
 
     public function toggleGroupBlock($id)
     {
@@ -148,19 +151,7 @@ public function leaveGroup($id)
         ]);
     }
 
-    // Detailed group view (members + questions + answers summary)
-    // public function groupDetails($id)
-    // {
-    //     $group = Group::with([
-    //         'user',
-    //         'members' => fn($q) => $q->select('users.id', 'users.name', 'users.username', 'users.avatar', 'users.role'),
-    //         'questions' => fn($q) => $q->with(['user', 'answers' => fn($qa) => $qa->with('user')])
-    //     ])
-    //     ->withCount('members')
-    //     ->findOrFail($id);
-
-    //     return response()->json($group);
-    // }
+   
 
    public function groupDetails($id)
 {
@@ -209,16 +200,93 @@ public function leaveGroup($id)
 
 
     public function questionDetails($id)
+    {
+        $question = Question::with([
+            'user' => fn($q) => $q->select('id', 'name', 'username', 'avatar'),
+            'field' => fn($q) => $q->select('id', 'fields'),
+            'answers' => fn($q) => $q->with('user:id,name,username,avatar')
+        ])
+        ->findOrFail($id);
+
+        $question->answers_count = $question->answers()->count();
+
+        return response()->json($question);
+    }
+
+    /**
+     * Delete a group (Admin only).
+     */
+    public function deleteGroup($id)
+    {
+        $group = Group::findOrFail($id);
+        $group->delete();
+
+        return response()->json(['message' => 'Group deleted successfully.']);
+    }
+
+    /**
+     * Delete a question (Admin only).
+     */
+    public function deleteQuestion($id)
+    {
+        $question = Question::findOrFail($id);
+        $question->delete();
+
+        return response()->json(['message' => 'Question deleted successfully.']);
+    }
+
+
+    /**
+ * Archive a question (soft hide from users)
+ */
+public function archiveQuestion($id)
 {
-    $question = Question::with([
-        'user' => fn($q) => $q->select('id', 'name', 'username', 'avatar'),
-        'field' => fn($q) => $q->select('id', 'fields'),
-        'answers' => fn($q) => $q->with('user:id,name,username,avatar')
-    ])
-    ->findOrFail($id);
+    $question = Question::findOrFail($id);
+    $question->update(['is_archived' => true]);
 
-    $question->answers_count = $question->answers()->count();
-
-    return response()->json($question);
+    return response()->json([
+        'message' => 'Question archived successfully. It is now hidden from users.'
+    ]);
 }
+
+/**
+ * Unarchive a question
+ */
+public function unarchiveQuestion($id)
+{
+    $question = Question::findOrFail($id);
+    $question->update(['is_archived' => false]);
+
+    return response()->json([
+        'message' => 'Question unarchived successfully.'
+    ]);
+}
+
+
+public function mostActivated()
+{
+    // User with most created questions
+    $mostQuestionUser = User::withCount('questions')
+        ->orderByDesc('questions_count')
+        ->first();
+
+    // User with most answers submitted
+    $mostAnswerUser = User::withCount('answers')
+        ->orderByDesc('answers_count')
+        ->first();
+
+    return response()->json([
+        'most_question_creator' => [
+            'user_id' => $mostQuestionUser?->id,
+            'name' => $mostQuestionUser?->name,
+            'questions_count' => $mostQuestionUser?->questions_count,
+        ],
+        'most_active_answerer' => [
+            'user_id' => $mostAnswerUser?->id,
+            'name' => $mostAnswerUser?->name,
+            'answers_count' => $mostAnswerUser?->answers_count,
+        ]
+    ]);
+}
+
 }

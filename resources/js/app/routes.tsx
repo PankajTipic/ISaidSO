@@ -178,6 +178,8 @@ import { GroupsScreen } from '@/app/screens/GroupsScreen';
 import { GroupDetailScreen } from '@/app/screens/GroupDetailScreen';
 import { AboutScreen } from '@/app/screens/AboutScreen';
 import { NotificationsScreen } from '@/app/screens/NotificationsScreen';
+import { PrivacyPolicyScreen } from '@/app/screens/PrivacyPolicyScreen';
+import { ContactUsScreen } from '@/app/screens/ContactUsScreen';
 
 // ────────────────────────────────────────────────
 // Admin screens & guards
@@ -235,6 +237,14 @@ export const router = createBrowserRouter([
       {
         path: 'verify-email/:token',
         Component: EmailVerificationScreen,
+      },
+      {
+        path: 'privacy',
+        Component: PrivacyPolicyScreen,
+      },
+      {
+        path: 'contact',
+        Component: ContactUsScreen,
       },
 
       // Google OAuth / social login callbacks

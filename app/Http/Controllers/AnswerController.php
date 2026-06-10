@@ -257,6 +257,15 @@ class AnswerController extends Controller
 
         $question = Question::findOrFail($validated['question_id']);
 
+        // Check if voting period has ended (voting_end_date)
+        if ($question->voting_end_date && now()->gt($question->voting_end_date)) {
+            return response()->json([
+                'message' => 'Voting period has ended for this prediction.',
+                'voting_ended' => true,
+                'voting_end_date' => $question->voting_end_date,
+            ], 403);
+        }
+
         // Private question access check
         if ($question->visibility === 'private' && $question->user_id !== $userId) {
             $isSharedWithUser = $question->groups()

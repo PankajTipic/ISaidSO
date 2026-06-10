@@ -15,8 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
        
         $middleware->alias([
         'admin' => \App\Http\Middleware\CheckIsAdmin::class,
-        // you can add more aliases here later, e.g.
-        // 'verified.user' => \App\Http\Middleware\EnsureUserIsVerified::class,
+        'not_blocked' => \App\Http\Middleware\CheckNotBlocked::class,
+        'maintenance' => \App\Http\Middleware\CheckMaintenanceMode::class,
+        'track_activity' => \App\Http\Middleware\TrackUserActivity::class,
     ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

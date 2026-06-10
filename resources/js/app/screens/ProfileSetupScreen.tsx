@@ -117,9 +117,10 @@ export function ProfileSetupScreen() {
             await postFormDataAuth('/api/profile/update', formData);
 
             // Refresh user state to update is_profile_completed
-            await dispatch(checkAuthStatus());
+            const result = await dispatch(checkAuthStatus()).unwrap();
 
-            navigate('/home');
+            const isAdmin = ['admin', 'super_admin', 'system_admin'].includes((result?.role || '').toLowerCase().trim());
+            navigate(isAdmin ? '/admin' : '/home', { replace: true });
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to update profile');
         } finally {

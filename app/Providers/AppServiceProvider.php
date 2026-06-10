@@ -18,8 +18,23 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
-    {
-        Schema::defaultStringLength(191);
-    }
+    // public function boot(): void
+    // {
+    //     Schema::defaultStringLength(191);
+    // }
+
+        public function boot(): void
+{
+    Schema::defaultStringLength(191);
+
+    \Illuminate\Support\Facades\Event::listen(
+        \SocialiteProviders\Manager\SocialiteWasCalled::class,
+        \SocialiteProviders\Facebook\FacebookExtendSocialite::class,
+    );
+
+   \Illuminate\Support\Facades\Event::listen(
+    \SocialiteProviders\Manager\SocialiteWasCalled::class,
+    \SocialiteProviders\Microsoft\MicrosoftExtendSocialite::class,
+);
+}
 }

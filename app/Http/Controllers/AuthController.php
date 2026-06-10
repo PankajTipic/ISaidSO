@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Traits\UploadsImages; // Import the Trait
 
 
+
 class AuthController extends Controller
 {
     use UploadsImages; // Use the Trait
@@ -69,6 +70,7 @@ class AuthController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user) {
+            \App\Models\AuditLog::log(null, 'failed_login', "Failed login attempt for unregistered email: {$request->email}");
             return response()->json([
                 'message' => 'The provided email is not registered.',
                 'errors' => ['email' => ['The provided email is not registered.']]
@@ -84,6 +86,7 @@ class AuthController extends Controller
         }
 
         if ($user->is_blocked) {
+            \App\Models\AuditLog::log($user->id, 'failed_login', 'Blocked user attempted login');
             return response()->json([
                 'message' => 'Your account has been blocked by an administrator.',
                 'errors' => ['email' => ['This account is blocked.']]
@@ -91,6 +94,7 @@ class AuthController extends Controller
         }
 
         if (!Hash::check($request->password, $user->password)) {
+            \App\Models\AuditLog::log($user->id, 'failed_login', 'Incorrect password attempt');
             return response()->json([
                 'message' => 'Incorrect password.',
                 'errors' => ['password' => ['Incorrect password.']]
@@ -105,15 +109,82 @@ class AuthController extends Controller
             ], 422);
         }
 
+        // 2FA check for Admin, Super Admin, and System Admin roles
+        if (in_array($user->role, ['admin', 'super_admin', 'system_admin'])) {
+            $otp = strval(rand(100000, 999999));
+            $user->two_factor_code = $otp;
+            $user->two_factor_expires_at = now()->addMinutes(10);
+            $user->save();
+
+            try {
+                \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\AdminLoginOtp($otp, $user->name));
+                \App\Models\AuditLog::log($user->id, '2fa_generated', "2FA verification code sent to {$user->email}");
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Failed to send 2FA email: " . $e->getMessage());
+                return response()->json([
+                    'message' => 'Failed to send 2FA verification email. Please contact support.',
+                    'errors' => ['email' => ['Failed to send 2FA email.']]
+                ], 500);
+            }
+
+            return response()->json([
+                'requires_2fa' => true,
+                'email' => $user->email,
+                'message' => 'A 2FA code has been sent to your registered email.'
+            ], 200);
+        }
+
         $user->update(['last_login_at' => now()]);
+
+        return $this->issueTokens($user, $request);
+    }
+
+    public function verify2fa(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'otp' => 'required|string|size:6'
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        if (!$user->two_factor_code || $user->two_factor_code !== $request->otp) {
+            return response()->json([
+                'message' => 'Invalid verification code.',
+                'errors' => ['otp' => ['Invalid verification code.']]
+            ], 422);
+        }
+
+        if (now()->greaterThan($user->two_factor_expires_at)) {
+            return response()->json([
+                'message' => 'Verification code has expired.',
+                'errors' => ['otp' => ['Verification code has expired.']]
+            ], 422);
+        }
+
+        // Clear 2FA data
+        $user->two_factor_code = null;
+        $user->two_factor_expires_at = null;
+        $user->last_login_at = now();
+        $user->save();
+
+        // Log successful login
+        \App\Models\AuditLog::log($user->id, 'login', 'Admin logged in successfully via 2FA');
 
         return $this->issueTokens($user, $request);
     }
 
     public function logout(Request $request)
     {
-        // Revoke the token that was used to authenticate the current request
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+        if ($user) {
+            \App\Models\AuditLog::log($user->id, 'logout', 'User logged out');
+            $user->currentAccessToken()->delete();
+        }
         return response()->json(['message' => 'Logged out']);
     }
 
@@ -186,7 +257,9 @@ class AuthController extends Controller
         }
 
         // Update profile fields
-        $user->username = $request->username;
+        if ($request->has('username')) {
+            $user->username = $request->username;
+        }
         if ($request->has('name')) {
             $user->name = $request->name;
         }
@@ -248,6 +321,11 @@ class AuthController extends Controller
         $device = $request->header('User-Agent');
         Log::info("User {$user->name} logged in from device: {$device}");
 
+        // Log non-admin logins here (admins are logged in verify2fa)
+        if (!in_array($user->role, ['admin', 'super_admin', 'system_admin'])) {
+            \App\Models\AuditLog::log($user->id, 'login', 'User logged in successfully');
+        }
+
         // Access Token: 7 days
         $accessToken = $user->createToken('access_token', ['access-api'], now()->addDays(7));
 
@@ -306,68 +384,7 @@ class AuthController extends Controller
 
 
 
-
-    // public function handleGoogleCallback()
-    // {
-    //     try {
-    //         $googleUser = Socialite::driver('google')
-    //             ->setHttpClient(new \GuzzleHttp\Client(['verify' => false]))
-    //             ->stateless()
-    //             ->user();
-
-    //         $user = User::where('email', $googleUser->getEmail())->first();
-
-    //         if (!$user) {
-    //             // Determine username from email part or name
-    //             $baseUsername = explode('@', $googleUser->getEmail())[0];
-    //             $username = Str::substr($baseUsername, 0, 20);
-
-    //             // Ensure unique username
-    //             // ... (existing logic handled by create?)
-    //             // Actually we just create user here
-
-    //             $user = User::create([
-    //                 'name' => $googleUser->getName(),
-    //                 'email' => $googleUser->getEmail(),
-    //                 'username' => $this->generateUniqueUsername($googleUser->getName()), // need helper or logic
-    //                 'google_id' => $googleUser->getId(),
-    //                 'avatar' => $googleUser->getAvatar(),
-    //                 'password' => null, // No password for Google users
-    //                 'login_method' => 'google',
-    //                 'email_verified_at' => now(), // Auto-verify email from Google
-    //             ]);
-    //         } else {
-    //              // Update google_id if missing (e.g. existing email, linking google)
-    //              if (!$user->google_id) {
-    //                  $user->update([
-    //                     'google_id' => $googleUser->getId(),
-    //                     'login_method' => 'google',
-    //                     'email_verified_at' => $user->email_verified_at ?? now(), // Verify if not already
-    //                  ]);
-    //              } else {
-    //                  // Ensure verified if logging in with Google
-    //                  if (!$user->email_verified_at) {
-    //                      $user->update(['email_verified_at' => now()]);
-    //                  }
-    //              }
-    //         }
-
-    //         // For OAuth callback, we usually return a view that sends message to opener or redirects with token in URL
-    //         // Since this is an API, we probably need a frontend route to handle the callback code, 
-    //         // OR this endpoint returns a redirect to the frontend with tokens in query params.
-
-    //         // Simulating issueTokens logic for redirect
-    //         $this->logDevice($user, request());
-    //         $accessToken = $user->createToken('access_token', ['access-api'], now()->addMinutes(3));
-    //         $refreshToken = $user->createToken('refresh_token', ['issue-access-token'], now()->addMinutes(5));
-
-    //         return redirect(env('FRONTEND_URL', 'http://127.0.0.1:8000') . '/auth/callback?access_token=' . $accessToken->plainTextToken . '&refresh_token=' . $refreshToken->plainTextToken);
-
-    //     } catch (\Exception $e) {
-    //         Log::error('Google Login Error: ' . $e->getMessage());
-    //         return response()->json(['error' => 'Google Login Failed', 'message' => $e->getMessage()], 500);
-    //     }
-    // }
+  
     public function handleGoogleCallback()
     {
         Log::info('Google callback received', [
@@ -624,6 +641,214 @@ class AuthController extends Controller
 
 
 
+    // Apple
+    public function redirectToApple()
+    {
+        return Socialite::driver('apple')->stateless()->redirect();
+    }
+
+    public function handleAppleCallback()
+    {
+        return $this->handleSocialCallback('apple');
+    }
+
+    // Facebook
+    public function redirectToFacebook()
+    {
+        return Socialite::driver('facebook')->stateless()->redirect();
+    }
+
+    public function handleFacebookCallback()
+    {
+        return $this->handleSocialCallback('facebook');
+    }
+
+    // Microsoft
+    public function redirectToMicrosoft()
+    {
+        return Socialite::driver('microsoft')->stateless()->redirect();
+    }
+
+    public function handleMicrosoftCallback()
+    {
+        return $this->handleSocialCallback('microsoft');
+    }
+
+
+    // private function handleSocialCallback(string $provider)
+    // {
+    //     Log::info("{$provider} callback received", [
+    //         'full_url' => request()->fullUrl(),
+    //         'query' => request()->query()->all(),
+    //     ]);
+
+    //     try {
+    //         $socialUser = Socialite::driver($provider)->stateless()->user();
+
+    //         $user = User::updateOrCreate(
+    //             ['email' => $socialUser->getEmail()],
+    //             [
+    //                 'name'          => $socialUser->getName(),
+    //                 'email'         => $socialUser->getEmail(),
+    //                 'avatar'        => $socialUser->getAvatar(),
+    //                 'password'      => bcrypt(Str::random(24)), // dummy password
+    //                 'login_method'  => $provider,
+    //                 'email_verified_at' => now(),
+    //                 // Provider-specific IDs
+    //                 "{$provider}_id" => $socialUser->getId(),
+    //             ]
+    //         );
+
+    //         // Log device
+    //         $this->logDevice($user, request());
+
+    //         // Issue tokens
+    //         $accessToken = $user->createToken('access_token', ['access-api'], now()->addDays(7));
+    //         $refreshToken = $user->createToken('refresh_token', ['issue-access-token'], now()->addDays(30));
+
+    //         $redirectUrl = rtrim(env('FRONTEND_URL'), '/') . '/auth' .
+    //             '?access_token=' . $accessToken->plainTextToken .
+    //             '&refresh_token=' . $refreshToken->plainTextToken .
+    //             '&expires_in=604800';
+
+    //         return redirect($redirectUrl);
+
+    //     } catch (\Exception $e) {
+    //         Log::error("{$provider} callback failed", [
+    //             'exception' => $e->getMessage(),
+    //             'trace' => $e->getTraceAsString(),
+    //         ]);
+
+    //         return redirect(rtrim(env('FRONTEND_URL'), '/') . '/login?error=' . $provider . '_login_failed&message=' . urlencode($e->getMessage()));
+    //     }
+    // }
+
+
+
+
+    private function handleSocialCallback(string $provider)
+{
+    Log::info("{$provider} callback received", [
+        'full_url' => request()->fullUrl(),
+        'query' => request()->query(),
+    ]);
+
+    try {
+        $socialUser = Socialite::driver($provider)->stateless()->user();
+
+        // Email null check
+        $email = $socialUser->getEmail();
+        if (empty($email)) {
+            $email = $socialUser->getId() . '@' . $provider . '.placeholder.com';
+        }
+
+        $user = User::updateOrCreate(
+            ['email' => $email],
+            [
+                'name'              => $socialUser->getName(),
+                'email'             => $email,
+                'avatar'            => $socialUser->getAvatar(),
+                'password'          => bcrypt(Str::random(24)),
+                'login_method'      => $provider,
+                'email_verified_at' => now(),
+                "{$provider}_id"    => $socialUser->getId(),
+            ]
+        );
+
+        $this->logDevice($user, request());
+
+        $accessToken  = $user->createToken('access_token', ['access-api'], now()->addDays(7));
+        $refreshToken = $user->createToken('refresh_token', ['issue-access-token'], now()->addDays(30));
+
+        $redirectUrl = rtrim(env('FRONTEND_URL'), '/') . '/auth'
+            . '?access_token='  . $accessToken->plainTextToken
+            . '&refresh_token=' . $refreshToken->plainTextToken
+            . '&expires_in=604800';
+
+        return redirect($redirectUrl);
+
+    } catch (\Exception $e) {
+        Log::error("{$provider} callback failed", [
+            'exception' => $e->getMessage(),
+            'trace'     => $e->getTraceAsString(),
+        ]);
+
+        return redirect(rtrim(env('FRONTEND_URL'), '/') . '/login?error=' . $provider . '_login_failed&message=' . urlencode($e->getMessage()));
+    }
+}
+
+
+
+
+
+
+
+
+// Change Password
+public function changePassword(Request $request)
+{
+    $request->validate([
+        'current_password'  => 'required',
+        'password'          => 'required|min:8|confirmed',
+    ]);
+
+    $user = Auth::user();
+
+    if (!Hash::check($request->current_password, $user->password)) {
+        return response()->json([
+            'message' => 'Current password is incorrect.',
+        ], 422);
+    }
+
+    $user->password = Hash::make($request->password);
+    $user->save();
+
+    return response()->json(['message' => 'Password changed successfully.']);
+}
+
+// Change Email
+public function changeEmail(Request $request)
+{
+    $request->validate([
+        'email'    => 'required|email|unique:users,email',
+        'password' => 'required',
+    ]);
+
+    $user = Auth::user();
+
+    if (!Hash::check($request->password, $user->password)) {
+        return response()->json([
+            'message' => 'Password is incorrect.',
+        ], 422);
+    }
+
+    $user->email = $request->email;
+    $user->email_verified_at = null; // force re-verification
+    $user->save();
+
+    // Generate verification token
+    $token = Str::random(64);
+    $expiresAt = now()->addHours(24);
+
+    // Store token in database
+    DB::table('email_verification_tokens')->insert([
+        'user_id' => $user->id,
+        'token' => $token,
+        'expires_at' => $expiresAt,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // Send verification email
+    try {
+        $verificationUrl = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/') . '/verify-email/' . $token;
+        Mail::to($user->email)->send(new \App\Mail\VerifyEmail($verificationUrl, $user->name));
+    } catch (\Exception $e) {
+        Log::error("Failed to send email verification during change email: " . $e->getMessage());
+    }
+
+    return response()->json(['message' => 'Email updated successfully. Please verify your new email address.']);
+}
 
 
 

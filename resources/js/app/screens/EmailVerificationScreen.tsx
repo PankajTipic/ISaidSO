@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
-import { useAppDispatch } from '@/app/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
 import { checkAuthStatus } from '@/app/modules/auth/authSlice';
 import { host } from '@/util/constants';
 
@@ -59,8 +59,16 @@ export function EmailVerificationScreen() {
         verifyEmail();
     }, [token, dispatch]);
 
+    const user = useAppSelector((state) => state.auth.user);
+    const isProfileCompleted = user?.is_profile_completed;
+    const isAdmin = user && ['admin', 'super_admin', 'system_admin'].includes((user.role || '').toLowerCase().trim());
+
     const handleContinue = () => {
-        navigate('/profile-setup');
+        if (isProfileCompleted) {
+            navigate(isAdmin ? '/admin' : '/home', { replace: true });
+        } else {
+            navigate('/profile-setup');
+        }
     };
 
     return (
@@ -131,7 +139,9 @@ export function EmailVerificationScreen() {
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ delay: 0.5 }}
                         >
-                            Thank you for verifying your email. You can now set up your profile.
+                            {isProfileCompleted
+                                ? 'Thank you for verifying your email. Your email has been successfully updated.'
+                                : 'Thank you for verifying your email. You can now set up your profile.'}
                         </motion.p>
 
                         <motion.button
@@ -144,7 +154,9 @@ export function EmailVerificationScreen() {
                                 boxShadow: "0 0 20px rgba(168, 85, 247, 0.5)",
                             }}
                         >
-                            Continue to Profile Setup
+                            {isProfileCompleted
+                                ? isAdmin ? 'Go to Admin Dashboard' : 'Go to Home'
+                                : 'Continue to Profile Setup'}
                         </motion.button>
                     </div>
                 )}

@@ -24,6 +24,9 @@ interface AuthState {
     isError: boolean;
     message: string;
     isGuest: boolean;
+    // 2FA state
+    requires2fa: boolean;
+    pending2faEmail: string | null;
 }
 
 // Pre-load from localStorage to prevent auth flicker on refresh
@@ -48,6 +51,8 @@ const initialState: AuthState = {
     isError: false,
     message: '',
     isGuest: isGuestStored,
+    requires2fa: false,
+    pending2faEmail: null,
 };
 
 // Async Thunks
@@ -68,6 +73,18 @@ export const loginUser = createAsyncThunk(
     async (userData: any, thunkAPI) => {
         try {
             return await authService.login(userData);
+        } catch (error: any) {
+            const message = error.response?.data?.message || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
+export const verify2faOtp = createAsyncThunk(
+    'auth/verify2fa',
+    async (payload: { email: string; otp: string }, thunkAPI) => {
+        try {
+            return await authService.verify2fa(payload);
         } catch (error: any) {
             const message = error.response?.data?.message || error.message || error.toString();
             return thunkAPI.rejectWithValue(message);
@@ -98,7 +115,6 @@ export const checkAuthStatus = createAsyncThunk(
         try {
             return await authService.getUser();
         } catch (error: any) {
-            // If getUser fails (even with retry in service), we aren't auth'd
             const message = error.response?.data?.message || error.message || error.toString();
             return thunkAPI.rejectWithValue(message);
         }
@@ -113,7 +129,10 @@ export const authSlice = createSlice({
             state.isLoading = false;
             state.isError = false;
             state.message = '';
-            // isAuthChecking is not reset here as it's for initial load
+        },
+        reset2fa: (state) => {
+            state.requires2fa = false;
+            state.pending2faEmail = null;
         },
         setCredentials: (state, action) => {
             state.isAuthenticated = true;
@@ -149,7 +168,6 @@ export const authSlice = createSlice({
             .addCase(registerUser.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.isError = false;
-                // Don't set user or isAuthenticated - user needs to verify email first
                 state.message = action.payload.message || 'Registration successful! Please check your email to verify your account.';
             })
             .addCase(registerUser.rejected, (state, action) => {
@@ -163,13 +181,23 @@ export const authSlice = createSlice({
                 state.isLoading = true;
                 state.isError = false;
                 state.message = '';
+                state.requires2fa = false;
+                state.pending2faEmail = null;
             })
             .addCase(loginUser.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.isAuthenticated = true;
-                state.user = action.payload.user;
-                // Save user details to local storage
-                localStorage.setItem('user', JSON.stringify(action.payload.user));
+                if (action.payload.requires_2fa) {
+                    // Admin 2FA required — do NOT log in yet, show OTP screen
+                    state.requires2fa = true;
+                    state.pending2faEmail = action.payload.email;
+                    state.isAuthenticated = false;
+                    state.user = null;
+                } else {
+                    // Normal user — log in immediately
+                    state.isAuthenticated = true;
+                    state.user = action.payload.user;
+                    localStorage.setItem('user', JSON.stringify(action.payload.user));
+                }
             })
             .addCase(loginUser.rejected, (state, action) => {
                 state.isLoading = false;
@@ -177,11 +205,32 @@ export const authSlice = createSlice({
                 state.message = action.payload as string;
                 state.user = null;
             })
+            // Verify 2FA OTP
+            .addCase(verify2faOtp.pending, (state) => {
+                state.isLoading = true;
+                state.isError = false;
+                state.message = '';
+            })
+            .addCase(verify2faOtp.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isAuthenticated = true;
+                state.user = action.payload.user;
+                state.requires2fa = false;
+                state.pending2faEmail = null;
+                localStorage.setItem('user', JSON.stringify(action.payload.user));
+            })
+            .addCase(verify2faOtp.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload as string;
+            })
             // Logout
             .addCase(logoutUser.fulfilled, (state) => {
                 state.user = null;
                 state.isAuthenticated = false;
                 state.isGuest = false;
+                state.requires2fa = false;
+                state.pending2faEmail = null;
                 localStorage.removeItem('isGuest');
             })
             // Check Auth
@@ -191,7 +240,7 @@ export const authSlice = createSlice({
             .addCase(checkAuthStatus.fulfilled, (state, action) => {
                 state.isAuthChecking = false;
                 state.isAuthenticated = true;
-                state.user = action.payload; // getUser returns direct user object
+                state.user = action.payload;
                 localStorage.setItem('user', JSON.stringify(action.payload));
             })
             .addCase(checkAuthStatus.rejected, (state) => {
@@ -205,5 +254,5 @@ export const authSlice = createSlice({
     },
 });
 
-export const { reset, setCredentials, guestLogin } = authSlice.actions;
+export const { reset, reset2fa, setCredentials, guestLogin } = authSlice.actions;
 export default authSlice.reducer;

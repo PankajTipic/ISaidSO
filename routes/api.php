@@ -120,9 +120,28 @@ Route::get('/auth/google/callback', [\App\Http\Controllers\AuthController::class
 Route::get('/auth/verify-email/{token}', [\App\Http\Controllers\AuthController::class, 'verifyEmail']);
 Route::post('/auth/forgot-password', [\App\Http\Controllers\AuthController::class, 'forgotPassword']);
 Route::post('/auth/reset-password', [\App\Http\Controllers\AuthController::class, 'resetPassword']);
+Route::post('/auth/verify-2fa', [\App\Http\Controllers\AuthController::class, 'verify2fa']);
+
+
+
+
+
+Route::get('/auth/apple', [AuthController::class, 'redirectToApple']);
+Route::get('/auth/apple/callback', [AuthController::class, 'handleAppleCallback']);
+
+Route::get('/auth/facebook', [AuthController::class, 'redirectToFacebook']);
+Route::get('/auth/facebook/callback', [AuthController::class, 'handleFacebookCallback']);
+
+Route::get('/auth/microsoft', [AuthController::class, 'redirectToMicrosoft']);
+Route::get('/auth/microsoft/callback', [AuthController::class, 'handleMicrosoftCallback']);
+
+
+// Public Contact Form & Settings Routes
+Route::post('/contact', [\App\Http\Controllers\ContactMessageController::class, 'submit']);
+Route::get('/settings/{key}', [\App\Http\Controllers\SettingController::class, 'getSetting']);
 
 // ===================== PROTECTED ROUTES (auth:sanctum) =====================
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'not_blocked'])->group(function () {
 
     Route::get('/profile', [\App\Http\Controllers\AuthController::class, 'profile']);
     Route::post('/logout', [\App\Http\Controllers\AuthController::class, 'logout']);
@@ -206,8 +225,29 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::get('/answers', [\App\Http\Controllers\AdminController::class, 'answers']);
     Route::get('/questions/{id}', [\App\Http\Controllers\AdminController::class, 'questionDetails']);
 
+    // Admin Deletions
+    Route::delete('/questions/{id}', [\App\Http\Controllers\AdminController::class, 'deleteQuestion']);
+    Route::delete('/groups/{id}', [\App\Http\Controllers\AdminController::class, 'deleteGroup']);
+
+    //Archive
+    Route::post('/questions/{id}/archive', [AdminController::class, 'archiveQuestion']);
+    Route::post('/questions/{id}/unarchive', [AdminController::class, 'unarchiveQuestion']);
+
+    // Admin Contact Messages
+    Route::get('/contact-messages', [\App\Http\Controllers\ContactMessageController::class, 'index']);
+    Route::get('/contact-messages/{id}', [\App\Http\Controllers\ContactMessageController::class, 'show']);
+    Route::post('/contact-messages/{id}/read', [\App\Http\Controllers\ContactMessageController::class, 'markAsRead']);
+    Route::delete('/contact-messages/{id}', [\App\Http\Controllers\ContactMessageController::class, 'destroy']);
+
+    // Admin Settings
+    Route::post('/settings', [\App\Http\Controllers\SettingController::class, 'updateSetting']);
+
+     Route::get('/mostActivated', [AdminController::class, 'mostActivated']);
+});
 
 
 
-
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/user/change-password', [AuthController::class, 'changePassword']);
+    Route::post('/user/change-email',    [AuthController::class, 'changeEmail']);
 });

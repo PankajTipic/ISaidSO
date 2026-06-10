@@ -244,7 +244,6 @@ export function CreatePredictionScreen() {
       if (votingEndDate) {
         const vDate = new Date(votingEndDate);
         if (vDate <= new Date()) return toast.error('Voting end date must be in the future');
-        if (vDate >= predDate) return toast.error('Voting must end before prediction ends');
       }
       return setIsReviewing(true);
     }
@@ -479,7 +478,7 @@ export function CreatePredictionScreen() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground">
-                     Destinated Date <span className="text-[#ec4899]">*</span>
+                     Destined Date <span className="text-[#ec4899]">*</span>
                     </Label>
                     <Input type="datetime-local" value={predictionOverDate}
                       onChange={e => setPredictionOverDate(e.target.value)}
@@ -488,11 +487,12 @@ export function CreatePredictionScreen() {
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground">
-                      Validation ends <span className="text-muted-foreground/50">(optional)</span>
+                      Validation ends <span className="text-muted-foreground/50">(default: 7 days)</span>
                     </Label>
                     <Input type="datetime-local" value={votingEndDate}
                       onChange={e => setVotingEndDate(e.target.value)}
-                      className="bg-white border-border h-10" />
+                      className="bg-white border-border h-10"
+                      min={new Date().toISOString().slice(0, 16)} />
                   </div>
                   {/* <Input 
         type="datetime-local" 

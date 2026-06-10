@@ -10,12 +10,15 @@ class Question extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'field_id', 'questions', 'options', 'correct_answer', 'ans_type_id', 'start_date', 'end_date', 'visibility',
-        'module_type', 'description', 'location_scope', 'status', 'result', 'subscription_required'
+        'user_id', 'field_id', 'questions', 'options', 'correct_answer', 'ans_type_id', 'start_date', 'end_date', 'voting_end_date', 'visibility',
+        'module_type', 'description', 'location_scope', 'status', 'result', 'subscription_required','is_archived'
     ];
 
     protected $casts = [
         'options' => 'array', // JSON to array
+        'voting_end_date' => 'datetime',
+        'end_date' => 'datetime',
+        'is_archived' => 'boolean',
     ];
 
     public function user()

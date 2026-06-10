@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
-import { loginUser, registerUser, checkAuthStatus, guestLogin } from '@/app/modules/auth/authSlice';
+import { loginUser, registerUser, checkAuthStatus, guestLogin, verify2faOtp, reset2fa } from '@/app/modules/auth/authSlice';
 import { Input } from '@/app/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, Loader2, User } from 'lucide-react';
@@ -122,10 +122,15 @@ export default function LoginScreen() {
   const [shake, setShake] = useState<{ [k: string]: boolean }>({});
   const [showVerificationModal, setShowVerificationModal] = useState(false);
 
+  // ── 2FA OTP State ──────────────────────────────────────────────────────────
+  const [otp, setOtp] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const [resendTimer, setResendTimer] = useState(0);
+
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isLoading, isError, message, isAuthenticated, user, isGuest } = useAppSelector(s => s.auth);
+  const { isLoading, isError, message, isAuthenticated, user, isGuest, requires2fa, pending2faEmail } = useAppSelector(s => s.auth);
 
   useEffect(() => {
     const p = new URLSearchParams(location.search);
@@ -144,7 +149,8 @@ export default function LoginScreen() {
   useEffect(() => {
     if (!isAuthenticated || !user) return;
     if (!user.is_profile_completed && !isGuest) { navigate('/profile-setup', { replace: true }); return; }
-    navigate((user.role || '').toLowerCase().trim() === 'admin' ? '/admin' : '/home', { replace: true });
+    const isAdmin = ['admin', 'super_admin', 'system_admin'].includes((user.role || '').toLowerCase().trim());
+    navigate(isAdmin ? '/admin' : '/home', { replace: true });
   }, [isAuthenticated, user, isGuest, navigate]);
 
   useEffect(() => {
@@ -156,8 +162,21 @@ export default function LoginScreen() {
     if (isError && message) {
       if (message.includes('email') || message.includes('registered')) triggerError('email', message);
       else if (message.includes('password')) triggerError('password', message);
+      // 2FA errors
+      if (requires2fa) setOtpError(message);
     }
   }, [isError, message]);
+
+  // Resend countdown timer
+  useEffect(() => {
+    if (requires2fa && resendTimer === 0) setResendTimer(60);
+  }, [requires2fa]);
+
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const t = setTimeout(() => setResendTimer(r => r - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendTimer]);
 
   const triggerError = (f: string, msg: string) => {
     setErrors(p => ({ ...p, [f]: msg }));
@@ -186,13 +205,198 @@ export default function LoginScreen() {
         await dispatch(registerUser({ name, email, password, password_confirmation: passwordConfirmation, country, city })).unwrap();
       } else {
         localStorage.removeItem('isGuest');
-        await dispatch(loginUser({ email, password })).unwrap();
-        toast.success('Logged in successfully');
+        const result = await dispatch(loginUser({ email, password })).unwrap();
+        // If requires_2fa, the authSlice sets requires2fa=true and we show OTP screen
+        if (!result.requires_2fa) {
+          toast.success('Logged in successfully');
+        }
       }
     } catch (err) { console.error(err); }
   };
 
+  const handleVerifyOtp = async () => {
+    setOtpError('');
+    if (!otp.trim() || otp.length !== 6) {
+      setOtpError('Please enter the 6-digit code sent to your email');
+      return;
+    }
+    try {
+      await dispatch(verify2faOtp({ email: pending2faEmail!, otp })).unwrap();
+      toast.success('Verified! Welcome to the Admin Panel.');
+    } catch (err: any) {
+      // Error is already set in authSlice.isError/message and caught in useEffect
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0) return;
+    setOtp('');
+    setOtpError('');
+    try {
+      await dispatch(loginUser({ email, password })).unwrap();
+      setResendTimer(60);
+      toast.success('A new code has been sent to your email.');
+    } catch (err) {
+      toast.error('Failed to resend code. Please go back and try again.');
+    }
+  };
+
   const shakeAnim = (s: boolean) => ({ x: s ? [0, -8, 8, -8, 8, 0] : 0, transition: { duration: 0.4 } });
+
+  // ── 2FA OTP Screen ───────────────────────────────────────────────────────
+  if (requires2fa) {
+    return (
+      <div className="min-h-screen bg-white font-sans" style={{ position: 'relative', overflow: 'hidden' }}>
+        {/* Background floating text */}
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+          <FloatingTextLayer />
+        </div>
+
+        <div className="relative min-h-screen flex items-center justify-center px-4" style={{ zIndex: 1 }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="w-full max-w-[400px]"
+          >
+            <div
+              className="rounded-3xl p-8"
+              style={{
+                position: 'relative',
+                overflow: 'hidden',
+                background: 'rgba(255,255,255,0.90)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                boxShadow:
+                  '0 0 0 1.5px rgba(168,85,247,0.25), 0 24px 64px rgba(124,58,237,0.14), 0 4px 16px rgba(0,0,0,0.07)',
+              }}
+            >
+              {/* Floating words inside card */}
+              <div aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+                <FloatingTextLayer />
+              </div>
+
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                {/* Shield icon */}
+                <div className="flex justify-center mb-5">
+                  <div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(236,72,153,0.12))' }}
+                  >
+                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24">
+                      <defs>
+                        <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#7c3aed" />
+                          <stop offset="100%" stopColor="#ec4899" />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        stroke="url(#shieldGrad)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="text-center mb-6">
+                  <h2 className="text-xl font-black text-gray-900">Admin Verification</h2>
+                  <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+                    We sent a 6-digit code to<br />
+                    <span className="font-bold text-gray-800">{pending2faEmail}</span>
+                  </p>
+                </div>
+
+                {/* OTP Input */}
+                <div className="space-y-4">
+                  <div>
+                    <input
+                      id="otp-input"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={otp}
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        setOtp(val);
+                        setOtpError('');
+                      }}
+                      placeholder="Enter 6-digit code"
+                      className="w-full h-14 text-center text-2xl font-black tracking-[0.5em] rounded-xl border-2 outline-none transition-all"
+                      style={{
+                        borderColor: otpError ? '#f87171' : otp.length === 6 ? '#7c3aed' : '#e5e7eb',
+                        background: 'rgba(255,255,255,0.9)',
+                        letterSpacing: otp ? '0.4em' : '0',
+                        color: '#1f2937',
+                      }}
+                      onKeyDown={e => { if (e.key === 'Enter') handleVerifyOtp(); }}
+                      autoFocus
+                    />
+                    {otpError && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-xs text-red-500 mt-2 text-center"
+                      >
+                        {otpError}
+                      </motion.p>
+                    )}
+                  </div>
+
+                  {/* Verify Button */}
+                  <button
+                    id="verify-otp-btn"
+                    type="button"
+                    disabled={isLoading || otp.length !== 6}
+                    onClick={handleVerifyOtp}
+                    className="w-full h-12 text-white text-sm font-black rounded-xl transition-all hover:opacity-90 active:scale-[0.98] flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)', boxShadow: '0 4px 16px rgba(124,58,237,0.35)' }}
+                  >
+                    {isLoading ? (
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : 'Verify & Login'}
+                  </button>
+
+                  {/* Resend + Back */}
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="button"
+                      onClick={() => { dispatch(reset2fa()); setOtp(''); setOtpError(''); }}
+                      className="text-xs text-gray-500 hover:text-gray-700 font-semibold transition-colors"
+                    >
+                      ← Back to Login
+                    </button>
+                    <button
+                      type="button"
+                      disabled={resendTimer > 0}
+                      onClick={handleResendOtp}
+                      className="text-xs font-bold transition-opacity disabled:opacity-40"
+                      style={{
+                        background: resendTimer > 0 ? 'none' : 'linear-gradient(135deg, #7c3aed, #ec4899)',
+                        WebkitBackgroundClip: resendTimer > 0 ? 'unset' : 'text',
+                        WebkitTextFillColor: resendTimer > 0 ? '#9ca3af' : 'transparent',
+                        backgroundClip: resendTimer > 0 ? 'unset' : 'text',
+                        color: resendTimer > 0 ? '#9ca3af' : 'transparent',
+                      }}
+                    >
+                      {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Info note */}
+                <p className="text-[10px] text-gray-400 text-center mt-5 leading-relaxed">
+                  This code expires in <span className="font-bold text-gray-600">10 minutes</span>.<br />
+                  Check your spam folder if you don't see the email.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -562,3 +766,14 @@ export default function LoginScreen() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
