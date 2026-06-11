@@ -2776,9 +2776,11 @@ import GroupsTab from './admin/GroupsTab';
 import PredictionsTab from './admin/PredictionsTab';
 import LeaderboardTab from './admin/LeaderboardTab';
 import NotificationsTab from './admin/NotificationsTab';
-// import ProfileTab from './admin/ProfileTab';
+import ProfileTab from './admin/ProfileTab';
 
 interface User { id: number; name: string; email: string; username: string; role: string; is_blocked: boolean; avatar_url?: string; }
+
+
 
 export function AdminDashboardScreen() {
     const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'groups' | 'predictions' | 'leaderboard' | 'notifications' | 'profile'>('overview');
@@ -2906,7 +2908,8 @@ export function AdminDashboardScreen() {
 
                 <main className="flex-1 overflow-y-auto bg-slate-50/70 p-5">
                     <div className="max-w-7xl mx-auto">
-                        {activeTab === 'overview' && <OverviewTab />}
+                        {/* {activeTab === 'overview' && <OverviewTab />} */}
+                        {activeTab === 'overview' && <OverviewTab onTabChange={(tab) => setActiveTab(tab as any)} />}
                         {activeTab === 'users' && <UsersTab />}
                         {activeTab === 'groups' && <GroupsTab />}
                         {activeTab === 'predictions' && <PredictionsTab />}
