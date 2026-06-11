@@ -13,6 +13,11 @@ export const ProtectedRoute = () => {
         return <Navigate to="/auth" replace />;
     }
 
+       // Admin users should never access user routes
+    if (user?.role === 'admin') {
+        return <Navigate to="/admin" replace />;
+    }
+
     // Guest users can only access /home and /about
     if (isGuest) {
         const guestAllowedRoutes = ['/home', '/about'];
