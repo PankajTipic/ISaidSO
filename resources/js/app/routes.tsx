@@ -161,6 +161,7 @@ import { ForgotPasswordScreen } from '@/app/screens/ForgotPasswordScreen';
 import { ResetPasswordScreen } from '@/app/screens/ResetPasswordScreen';
 import { EmailVerificationScreen } from '@/app/screens/EmailVerificationScreen';
 import { AuthCallback } from '@/app/screens/AuthCallback';
+import WhatsAppLoginScreen from '@/app/screens/WhatsAppLoginScreen';
 
 // ────────────────────────────────────────────────
 // Protected user screens (require authentication)
@@ -222,6 +223,10 @@ export const router = createBrowserRouter([
         path: 'login',
         Component: LoginScreen,
       },
+      {
+  path: 'whatsapp-login',
+  Component: WhatsAppLoginScreen,
+},
       {
         path: 'auth',
         Component: LoginScreen,

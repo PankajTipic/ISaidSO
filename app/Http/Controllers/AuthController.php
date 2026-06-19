@@ -12,6 +12,8 @@ use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Traits\UploadsImages; // Import the Trait
+use App\Models\WhatsappOtp;
+use Illuminate\Support\Facades\Http;
 
 
 
@@ -852,6 +854,174 @@ public function changeEmail(Request $request)
 
 
 
+
+
+
+
+
+public function sendWhatsappOtp(Request $request)
+{
+    $request->validate([
+        'phone' => 'required'
+    ]);
+
+    $otp = rand(100000,999999);
+
+    WhatsappOtp::updateOrCreate(
+        [
+            'phone' => $request->phone
+        ],
+        [
+            'otp' => $otp,
+            'expires_at' => now()->addMinutes(10)
+        ]
+    );
+
+    $response = Http::withToken(env('WHATSAPP_TOKEN'))
+        ->post(
+            'https://graph.facebook.com/v23.0/' .
+            env('WHATSAPP_PHONE_NUMBER_ID') .
+            '/messages',
+            [
+                'messaging_product' => 'whatsapp',
+                'to' => $request->phone,
+                'type' => 'template',
+                'template' => [
+                    'name' => 'otp_auth',
+                    'language' => [
+                        'code' => 'en_US'
+                    ],
+                    'components' => [
+                        [
+                            'type' => 'body',
+                            'parameters' => [
+                                [
+                                    'type' => 'text',
+                                    'text' => (string)$otp
+                                ]
+                            ]
+                        ],
+                        [
+                            'type' => 'button',
+                            'sub_type' => 'url',
+                            'index' => '0',
+                            'parameters' => [
+                                [
+                                    'type' => 'text',
+                                    'text' => (string)$otp
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        );
+
+    if (!$response->successful()) {
+        return response()->json([
+            'message' => 'WhatsApp API Failed',
+            'error' => $response->json()
+        ], 500);
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'OTP sent successfully'
+    ]);
+}
+
+
+// public function verifyWhatsappOtp(Request $request)
+// {
+//     $request->validate([
+//         'phone' => 'required',
+//         'otp' => 'required'
+//     ]);
+
+//     $record = WhatsappOtp::where('phone', $request->phone)
+//         ->where('otp', $request->otp)
+//         ->first();
+
+//     if (!$record) {
+//         return response()->json([
+//             'message' => 'Invalid OTP'
+//         ], 422);
+//     }
+
+//     if (now()->greaterThan($record->expires_at)) {
+//         return response()->json([
+//             'message' => 'OTP expired'
+//         ], 422);
+//     }
+
+//     $user = User::where('phone', $request->phone)->first();
+
+//     if (!$user) {
+
+//         $user = User::create([
+//             'name' => 'WhatsApp User',
+//             'phone' => $request->phone,
+//             'login_method' => 'whatsapp',
+//             'email_verified_at' => now(),
+//         ]);
+//     }
+
+//     $record->delete();
+
+//     return $this->issueTokens($user, $request);
+// }
+
+
+
+public function verifyWhatsappOtp(Request $request)
+{
+    $request->validate([
+        'phone' => 'required',
+        'otp' => 'required'
+    ]);
+
+    $record = WhatsappOtp::where('phone', $request->phone)
+        ->where('otp', $request->otp)
+        ->first();
+
+    if (!$record) {
+        return response()->json([
+            'message' => 'Invalid OTP'
+        ], 422);
+    }
+
+    if (now()->greaterThan($record->expires_at)) {
+        return response()->json([
+            'message' => 'OTP expired'
+        ], 422);
+    }
+
+    $isNewUser = false;
+
+    $user = User::where('phone', $request->phone)->first();
+
+    if (!$user) {
+
+        $isNewUser = true;
+
+        $user = User::create([
+            'name' => 'WhatsApp User',
+            'phone' => $request->phone,
+            'login_method' => 'whatsapp',
+            'email_verified_at' => now(),
+        ]);
+    }
+
+    $record->delete();
+
+    $tokens = $this->issueTokens($user, $request);
+
+    $data = $tokens->getData(true);
+
+    $data['is_new_user'] = $isNewUser;
+
+    return response()->json($data);
+}
 
 
 }

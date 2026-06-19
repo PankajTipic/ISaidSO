@@ -1460,7 +1460,7 @@ export function ProfileScreen() {
               <div className="glass-card rounded-2xl p-5 md:p-6 border border-border/50 shadow-sm">
                 <h3 className="font-bold mb-5 flex items-center gap-2">
                   <Users size={20} className="text-primary" />
-                  Groups
+                  Community
                 </h3>
                 <div className="space-y-2">
                   {user.groups?.length > 0 ? (
@@ -1480,7 +1480,7 @@ export function ProfileScreen() {
                     })
                   ) : (
                     <div className="text-center py-8 bg-muted/10 rounded-2xl border border-dashed border-border">
-                      <p className="text-xs text-muted-foreground">No groups yet</p>
+                      <p className="text-xs text-muted-foreground">No Community yet</p>
                     </div>
                   )}
                 </div>
@@ -1490,7 +1490,7 @@ export function ProfileScreen() {
                   style={{ borderColor: '#a855f7', color: '#a855f7' }}
                   onClick={() => navigate('/groups')}
                 >
-                  Discover More Groups
+                  Discover More Community
                 </Button>
               </div>
             </div>

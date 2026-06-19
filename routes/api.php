@@ -123,6 +123,11 @@ Route::post('/auth/reset-password', [\App\Http\Controllers\AuthController::class
 Route::post('/auth/verify-2fa', [\App\Http\Controllers\AuthController::class, 'verify2fa']);
 
 
+Route::post('/send-whatsapp-otp', [AuthController::class, 'sendWhatsappOtp']);
+Route::post('/verify-whatsapp-otp', [AuthController::class, 'verifyWhatsappOtp']);
+
+Route::get('/auth/whatsapp/redirect', [AuthController::class, 'redirectToWhatsapp']);
+Route::get('/auth/whatsapp/callback', [AuthController::class, 'handleWhatsappCallback']);
 
 
 
@@ -251,3 +256,4 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/change-password', [AuthController::class, 'changePassword']);
     Route::post('/user/change-email',    [AuthController::class, 'changeEmail']);
 });
+
