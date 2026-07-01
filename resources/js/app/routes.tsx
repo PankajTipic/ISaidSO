@@ -179,7 +179,7 @@ import { GroupsScreen } from '@/app/screens/GroupsScreen';
 import { GroupDetailScreen } from '@/app/screens/GroupDetailScreen';
 import { AboutScreen } from '@/app/screens/AboutScreen';
 import { NotificationsScreen } from '@/app/screens/NotificationsScreen';
-import { PrivacyPolicyScreen } from '@/app/screens/PrivacyPolicyScreen';
+import  PrivacyPolicyScreen  from '@/app/screens/PrivacyPolicyScreen';
 import { ContactUsScreen } from '@/app/screens/ContactUsScreen';
 
 // ────────────────────────────────────────────────
