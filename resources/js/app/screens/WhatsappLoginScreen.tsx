@@ -204,6 +204,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { postAuth } from '@/util/api';
+import { useAppDispatch } from '@/app/store/hooks';
+import { setCredentials } from '@/app/modules/auth/authSlice';
 
 // Same FloatingTextLayer used in your 2FA screen
 // const words = ['WhatsApp', 'Verify', 'Secure', 'Login', 'OTP', 'Connect', 'Message', 'Phone', 'Code', 'Auth'];

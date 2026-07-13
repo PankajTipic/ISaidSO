@@ -201,18 +201,40 @@ export default function LoginScreen() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setErrors({});
     if (!validateForm()) return;
-    try {
-      if (isRegister) {
-        await dispatch(registerUser({ name, email, password, password_confirmation: passwordConfirmation, country, city })).unwrap();
-      } else {
+    if (isRegister) {
+        navigate('/terms-acceptance', { 
+            state: { 
+                isRegister: true, 
+                pendingAction: 'email',
+                formData: { name, email, password, passwordConfirmation, country, city }
+            } 
+        });
+    } else {
         localStorage.removeItem('isGuest');
-        const result = await dispatch(loginUser({ email, password })).unwrap();
-        // If requires_2fa, the authSlice sets requires2fa=true and we show OTP screen
-        if (!result.requires_2fa) {
-          toast.success('Logged in successfully');
-        }
+        try {
+            const result = await dispatch(loginUser({ email, password })).unwrap();
+            if (!result.requires_2fa) {
+                toast.success('Logged in successfully');
+            }
+        } catch (err) { console.error(err); }
+    }
+  };
+
+  const handleSocialLogin = (providerUrl: string) => {
+      if (isRegister) {
+          navigate('/terms-acceptance', { 
+              state: { 
+                  isRegister: true, 
+                  pendingAction: providerUrl 
+              } 
+          });
+      } else {
+          if (providerUrl === 'whatsapp') {
+              navigate('/whatsapp-login');
+          } else {
+              window.location.href = providerUrl;
+          }
       }
-    } catch (err) { console.error(err); }
   };
 
   const handleVerifyOtp = async () => {
@@ -621,7 +643,6 @@ export default function LoginScreen() {
                   )}
                 </AnimatePresence>
 
-                {/* General error */}
                 {isError && !errors.email && !errors.password && !errors.name && !errors.passwordConfirmation && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                     className="flex items-center gap-2 text-xs text-red-600 bg-red-50/90 p-3 rounded-xl border border-red-100">
@@ -667,7 +688,7 @@ export default function LoginScreen() {
                 {/* Social Logins */}
                 <div className="grid grid-cols-2 gap-2">
                   {/* Google */}
-                  <a href={`${host}/api/auth/google`}
+                  <button type="button" onClick={() => handleSocialLogin(`${host}/api/auth/google`)}
                     className="flex items-center justify-center gap-2 h-10 border border-gray-200 rounded-xl bg-white/80 hover:bg-white text-xs font-semibold text-gray-700 transition-all"
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -677,50 +698,45 @@ export default function LoginScreen() {
                       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                     </svg>
                     Google
-                  </a>
+                  </button>
+
                   {/* Apple */}
-                  {/* <a href={`${host}/api/auth/apple`}
+                  <button type="button" onClick={() => handleSocialLogin(`${host}/api/auth/apple`)}
                     className="flex items-center justify-center gap-2 h-10 border border-gray-200 rounded-xl bg-white/80 hover:bg-white text-xs font-semibold text-gray-700 transition-all"
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.62-1.496 3.6-2.947 1.13-1.645 1.597-3.238 1.625-3.321-.036-.013-3.116-1.196-3.149-4.785-.026-3.003 2.45-4.436 2.56-4.502-1.39-2.036-3.55-2.274-4.33-2.324-1.57-.16-3.24 1.04-4.31 1.04-.26 0-.53-.05-.8-.11zM15.42 3.65c.87-1.05 1.45-2.51 1.29-3.96-1.24.05-2.78.83-3.68 1.89-.8.94-1.46 2.44-1.27 3.86 1.39.11 2.8-.73 3.66-1.79z"/>
                     </svg>
                     Apple
-                  </a> */}
+                  </button>
 
-    {/* <button
-  type="button"
-  onClick={() => navigate('/whatsapp-login')}
-  className="flex items-center justify-center gap-2 h-10 border border-gray-200 rounded-xl bg-white/80 hover:bg-white text-xs font-semibold text-gray-700 transition-all"
->
-  WhatsApp
-</button> */}
-
-<button
-  type="button"
-  onClick={() => navigate('/whatsapp-login')}
-  className="flex items-center justify-center gap-2 h-10 border border-gray-200 rounded-xl bg-white/80 hover:bg-white text-xs font-semibold text-gray-700 transition-all"
->
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path
-      d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"
-      fill="#25D366"
-    />
-  </svg>
-  WhatsApp
-</button>
+                  {/* WhatsApp */}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/whatsapp-login')}
+                    className="flex items-center justify-center gap-2 h-10 border border-gray-200 rounded-xl bg-white/80 hover:bg-white text-xs font-semibold text-gray-700 transition-all"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"
+                        fill="#25D366"
+                      />
+                    </svg>
+                    WhatsApp
+                  </button>
 
                   {/* Facebook */}
-                  <a href={`${host}/api/auth/facebook`}
+                  <button type="button" onClick={() => handleSocialLogin(`${host}/api/auth/facebook`)}
                     className="flex items-center justify-center gap-2 h-10 border border-gray-200 rounded-xl bg-white/80 hover:bg-white text-xs font-semibold text-gray-700 transition-all"
                   >
                     <svg className="w-4 h-4 text-[#1877F2]" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                     </svg>
                     Facebook
-                  </a>
+                  </button>
+
                   {/* Microsoft */}
-                  <a href={`${host}/api/auth/microsoft`}
+                  <button type="button" onClick={() => handleSocialLogin(`${host}/api/auth/microsoft`)}
                     className="flex items-center justify-center gap-2 h-10 border border-gray-200 rounded-xl bg-white/80 hover:bg-white text-xs font-semibold text-gray-700 transition-all"
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -730,7 +746,7 @@ export default function LoginScreen() {
                       <path fill="#ffba08" d="M12 12h10v10H12z"/>
                     </svg>
                     Microsoft
-                  </a>
+                  </button>
                 </div>
 
                 {/* Toggle */}

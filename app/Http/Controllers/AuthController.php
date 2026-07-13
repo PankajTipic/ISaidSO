@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Traits\UploadsImages; // Import the Trait
 use App\Models\WhatsappOtp;
 use Illuminate\Support\Facades\Http;
+use App\Models\UserConsent;
 
 
 
@@ -29,6 +30,9 @@ class AuthController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'country' => 'required|string|max:255',
             'city' => 'required|string|max:255',
+            'terms_accepted' => 'required|boolean|accepted',
+        ], [
+            'terms_accepted.accepted' => 'You must agree to the Terms & Conditions and Privacy Policy.'
         ]);
 
         $user = User::create([
@@ -38,6 +42,15 @@ class AuthController extends Controller
             'country' => $request->country,
             'city' => $request->city,
             'login_method' => 'email',
+        ]);
+
+        // Capture GDPR consent
+        UserConsent::create([
+            'user_id' => $user->id,
+            'consent_given' => true,
+            'terms_version' => '1.0',
+            'privacy_policy_version' => '1.0',
+            'ip_address' => $request->ip(),
         ]);
 
         // Generate verification token
@@ -646,12 +659,69 @@ class AuthController extends Controller
     // Apple
     public function redirectToApple()
     {
-        return Socialite::driver('apple')->stateless()->redirect();
+        return Socialite::driver('apple')->redirect();
     }
 
-    public function handleAppleCallback()
+    public function handleAppleCallback(Request $request)
     {
-        return $this->handleSocialCallback('apple');
+        Log::info('Apple callback received', [
+            'full_url'    => $request->fullUrl(),
+            'method'      => $request->method(),
+            'has_code'    => $request->has('code'),
+            'has_id_token'=> $request->has('id_token'),
+        ]);
+
+        try {
+            $socialUser = Socialite::driver('apple')->user();
+
+            // Apple only sends the user's name on the FIRST login
+            $name = null;
+            if ($request->has('user')) {
+                $userData = json_decode($request->input('user'), true);
+                $firstName = $userData['name']['firstName'] ?? '';
+                $lastName  = $userData['name']['lastName'] ?? '';
+                $name = trim($firstName . ' ' . $lastName) ?: null;
+            }
+
+            $email = $socialUser->getEmail();
+
+            // Apple may return a relay email — still valid
+            if (empty($email)) {
+                $email = $socialUser->getId() . '@privaterelay.appleid.com';
+            }
+
+            $user = User::updateOrCreate(
+                ['apple_id' => $socialUser->getId()],
+                [
+                    'name'              => $name ?? User::where('apple_id', $socialUser->getId())->value('name') ?? $this->generateUniqueUsername($email),
+                    'email'             => $email,
+                    'apple_id'          => $socialUser->getId(),
+                    'password'          => bcrypt(Str::random(24)),
+                    'login_method'      => 'apple',
+                    'email_verified_at' => now(),
+                ]
+            );
+
+            $this->logDevice($user, $request);
+
+            $accessToken  = $user->createToken('access_token', ['access-api'], now()->addDays(7));
+            $refreshToken = $user->createToken('refresh_token', ['issue-access-token'], now()->addDays(30));
+
+            $redirectUrl = rtrim(env('FRONTEND_URL'), '/') . '/auth'
+                . '?access_token='  . $accessToken->plainTextToken
+                . '&refresh_token=' . $refreshToken->plainTextToken
+                . '&expires_in=604800';
+
+            return redirect($redirectUrl);
+
+        } catch (\Exception $e) {
+            Log::error('Apple callback failed', [
+                'exception' => $e->getMessage(),
+                'trace'     => $e->getTraceAsString(),
+            ]);
+
+            return redirect(rtrim(env('FRONTEND_URL'), '/') . '/auth?error=apple_login_failed&message=' . urlencode($e->getMessage()));
+        }
     }
 
     // Facebook

@@ -162,6 +162,8 @@ import { ResetPasswordScreen } from '@/app/screens/ResetPasswordScreen';
 import { EmailVerificationScreen } from '@/app/screens/EmailVerificationScreen';
 import { AuthCallback } from '@/app/screens/AuthCallback';
 import WhatsAppLoginScreen from '@/app/screens/WhatsAppLoginScreen';
+import TermsScreen from '@/app/screens/TermsScreen';
+import TermsAcceptanceScreen from '@/app/screens/TermsAcceptanceScreen';
 
 // ────────────────────────────────────────────────
 // Protected user screens (require authentication)
@@ -244,8 +246,16 @@ export const router = createBrowserRouter([
         Component: EmailVerificationScreen,
       },
       {
-        path: 'privacy',
+        path: 'privacy-policy',
         Component: PrivacyPolicyScreen,
+      },
+      {
+        path: 'terms-and-conditions',
+        Component: TermsScreen,
+      },
+      {
+        path: 'terms-acceptance',
+        Component: TermsAcceptanceScreen,
       },
       {
         path: 'contact',

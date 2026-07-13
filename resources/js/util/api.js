@@ -354,8 +354,8 @@ export async function patchAuth(endpoint, data = {}) {
   return requestAuth(endpoint, 'PATCH', data);
 }
 
-export async function deleteAuth(endpoint) {
-  return requestAuth(endpoint, 'DELETE');
+export async function deleteAuth(endpoint, data = null) {
+  return requestAuth(endpoint, 'DELETE', data);
 }
 
 export async function postFormDataAuth(endpoint, formData) {

@@ -277,16 +277,51 @@ public function mostActivated()
 
     return response()->json([
         'most_question_creator' => [
-            'user_id' => $mostQuestionUser?->id,
-            'name' => $mostQuestionUser?->name,
+            'user_id'         => $mostQuestionUser?->id,
+            'name'            => $mostQuestionUser?->name,
             'questions_count' => $mostQuestionUser?->questions_count,
         ],
         'most_active_answerer' => [
-            'user_id' => $mostAnswerUser?->id,
-            'name' => $mostAnswerUser?->name,
-            'answers_count' => $mostAnswerUser?->answers_count,
+            'user_id'      => $mostAnswerUser?->id,
+            'name'         => $mostAnswerUser?->name,
+            'answers_count'=> $mostAnswerUser?->answers_count,
         ]
     ]);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// GDPR: Send data breach notification to all users (Article 33 & 34)
+// ─────────────────────────────────────────────────────────────────────────────
+public function sendBreachNotification(Request $request)
+{
+    $request->validate([
+        'breach_description' => 'required|string|min:20',
+        'action_required'    => 'required|string|min:10',
+    ]);
+
+    $detectedAt = now()->format('d M Y, H:i') . ' UTC';
+    $users      = User::whereNotNull('email_verified_at')->get();
+    $count      = 0;
+
+    foreach ($users as $user) {
+        \Illuminate\Support\Facades\Mail::to($user->email)->queue(
+            new \App\Mail\DataBreachNotification(
+                userName:          $user->name,
+                breachDescription: $request->breach_description,
+                detectedAt:        $detectedAt,
+                actionRequired:    $request->action_required,
+            )
+        );
+        $count++;
+    }
+
+    \Illuminate\Support\Facades\Log::warning("GDPR Breach Notification sent to {$count} users by admin ID: " . $request->user()->id);
+
+    return response()->json([
+        'message'     => "Breach notification sent to {$count} users successfully.",
+        'users_count' => $count,
+    ]);
 }
+
+}
+

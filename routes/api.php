@@ -131,8 +131,15 @@ Route::get('/auth/whatsapp/callback', [AuthController::class, 'handleWhatsappCal
 
 
 
-Route::get('/auth/apple', [AuthController::class, 'redirectToApple']);
-Route::get('/auth/apple/callback', [AuthController::class, 'handleAppleCallback']);
+// Route::get('/auth/apple', [AuthController::class, 'redirectToApple']);
+// Route::post('/auth/apple/callback', [AuthController::class, 'handleAppleCallback']);
+// Route::get('/auth/apple/callback', [AuthController::class, 'handleAppleCallback']); // fallback for GET
+
+Route::middleware('web')->group(function () {
+    Route::get('/auth/apple', [AuthController::class, 'redirectToApple']);
+    Route::post('/auth/apple/callback', [AuthController::class, 'handleAppleCallback']);
+    Route::get('/auth/apple/callback', [AuthController::class, 'handleAppleCallback']);
+});
 
 Route::get('/auth/facebook', [AuthController::class, 'redirectToFacebook']);
 Route::get('/auth/facebook/callback', [AuthController::class, 'handleFacebookCallback']);
@@ -256,4 +263,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/change-password', [AuthController::class, 'changePassword']);
     Route::post('/user/change-email',    [AuthController::class, 'changeEmail']);
 });
+
+// ===================== GDPR ROUTES =====================
+Route::middleware(['auth:sanctum', 'not_blocked'])->prefix('gdpr')->group(function () {
+    // Right to Access — Download all my data (Article 15)
+    Route::get('/export', [\App\Http\Controllers\GdprController::class, 'exportData']);
+
+    // Right to Erasure — Delete my account (Article 17)
+    Route::post('/delete-account', [\App\Http\Controllers\GdprController::class, 'deleteAccount']);
+
+    // Cancel deletion (within 30-day grace period)
+    Route::post('/cancel-deletion', [\App\Http\Controllers\GdprController::class, 'cancelDeletion']);
+});
+
+// Admin GDPR: Send breach notification (Article 33 & 34)
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
+    Route::post('/gdpr/breach-notification', [\App\Http\Controllers\AdminController::class, 'sendBreachNotification']);
+});
+
 

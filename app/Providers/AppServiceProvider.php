@@ -5,6 +5,9 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
 
+use SocialiteProviders\Manager\SocialiteWasCalled;
+use SocialiteProviders\Apple\AppleExtendSocialite;
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -14,6 +17,8 @@ class AppServiceProvider extends ServiceProvider
     {
         //
     }
+
+    
 
     /**
      * Bootstrap any application services.
@@ -36,5 +41,10 @@ class AppServiceProvider extends ServiceProvider
     \SocialiteProviders\Manager\SocialiteWasCalled::class,
     \SocialiteProviders\Microsoft\MicrosoftExtendSocialite::class,
 );
+
+    \Illuminate\Support\Facades\Event::listen(
+        \SocialiteProviders\Manager\SocialiteWasCalled::class,
+        \SocialiteProviders\Apple\AppleExtendSocialite::class,
+    );
 }
 }

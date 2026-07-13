@@ -12,8 +12,8 @@ export function Footer() {
       { label: 'Careers', path: '/careers' },
     ],
     legal: [
-      { label: 'Privacy Policy', path: '/privacy' },
-      { label: 'Terms of Service', path: '/terms' },
+      { label: 'Privacy Policy', path: '/privacy-policy' },
+      { label: 'Terms of Service', path: '/terms-and-conditions' },
       { label: 'Cookie Policy', path: '/cookies' },
       { label: 'Guidelines', path: '/guidelines' },
     ],

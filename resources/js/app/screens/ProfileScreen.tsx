@@ -79,8 +79,14 @@
 //   const [editQuestionText, setEditQuestionText] = useState('');
 //   const [editQuestionVisibility, setEditQuestionVisibility] = useState('public');
 //   const [editQuestionEndDate, setEditQuestionEndDate] = useState('');
+//   const [editQuestionVotingEndDate, setEditQuestionVotingEndDate] = useState('');
 //   const [isUpdatingQuestion, setIsUpdatingQuestion] = useState(false);
-
+//   const [editQuestionFieldId, setEditQuestionFieldId] = useState<number | null>(null);
+//   const [editQuestionDescription, setEditQuestionDescription] = useState('');
+//   
+//   // Privacy & Data Modal state
+//   const [privacyOpen, setPrivacyOpen] = useState(false);
+//
 //   const fetchProfile = async () => {
 //     try {
 //       setLoading(true);
@@ -783,7 +789,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/ta
 import {
   Trophy, Target, TrendingUp, Award, LogOut, Edit2, Loader2, MapPin,
   User, AtSign, Trash2, Calendar, Globe, Lock, Users, Clock, X,
-  Pencil, Zap, BarChart2
+  Pencil, Zap, BarChart2, Shield
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -796,6 +802,7 @@ import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
 import { logoutUser, checkAuthStatus } from '@/app/modules/auth/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { AvatarSelector } from '@/app/components/AvatarSelector';
+import { PrivacyDataModal } from '@/app/components/PrivacyDataModal';
 import { useState, useEffect } from 'react';
 import { getAuth, postFormDataAuth, deleteAuth, putAuth, patchAuth } from '@/util/api';
 import { toast } from 'sonner';
@@ -902,6 +909,9 @@ export function ProfileScreen() {
   const [editQuestionEndDate, setEditQuestionEndDate] = useState('');
   const [editQuestionVotingEndDate, setEditQuestionVotingEndDate] = useState('');
   const [isUpdatingQuestion, setIsUpdatingQuestion] = useState(false);
+  
+  // Privacy & Data Modal state
+  const [privacyOpen, setPrivacyOpen] = useState(false);
 
   const fetchProfile = async () => {
     try {
@@ -1252,6 +1262,15 @@ export function ProfileScreen() {
                 >
                   <LogOut size={16} className="mr-2" />
                   Sign Out
+                </Button>
+                <Button
+                  onClick={() => setPrivacyOpen(true)}
+                  variant="outline"
+                  className="rounded-xl border-border hover:bg-gray-50 transition-colors h-9 md:h-10 px-6 font-semibold"
+                  style={{ borderColor: '#6b7280', color: '#4b5563' }}
+                >
+                  <Shield size={16} className="mr-2" />
+                  Privacy & Data
                 </Button>
               </div>
             </div>
@@ -1705,6 +1724,11 @@ export function ProfileScreen() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <PrivacyDataModal 
+        open={privacyOpen} 
+        onClose={() => setPrivacyOpen(false)} 
+      />
 
       <MobileNav />
     </div>

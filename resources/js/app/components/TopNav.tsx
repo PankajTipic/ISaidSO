@@ -576,7 +576,7 @@ export function TopNav({
       icon: Shield,
       label: 'Privacy Policy',
       desc: 'Learn how we handle your data',
-      path: '/privacy',
+      path: '/privacy-policy',
       gradient: 'from-blue-500 to-blue-600',
     },
     {

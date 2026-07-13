@@ -77,7 +77,6 @@
 
 
 
-
 import { motion } from 'framer-motion';
 import {
   Shield,
@@ -99,14 +98,17 @@ export default function PrivacyPolicyScreen() {
       content: (
         <>
           <p>
-            We collect information necessary to provide and improve our
-            services.
+            Depending on your use of the Platform, we may collect the
+            following information:
           </p>
           <ul className="list-disc pl-6 mt-3 space-y-2">
-            <li>Name, email address, profile photo, country, and city.</li>
-            <li>Social login information from Google, Facebook, Apple, and Microsoft.</li>
-            <li>Questions created, answers submitted, and groups joined.</li>
-            <li>Device information including IP address and browser details.</li>
+            <li>Name</li>
+            <li>Email address</li>
+            <li>Contact number (where applicable)</li>
+            <li>Username</li>
+            <li>Profile information</li>
+            <li>Predictions, comments, votes and other content you choose to submit</li>
+            <li>Device, browser and technical information necessary for operating and securing the Platform</li>
           </ul>
         </>
       ),
@@ -114,87 +116,95 @@ export default function PrivacyPolicyScreen() {
     {
       title: 'How We Use Your Information',
       content: (
-        <ul className="list-disc pl-6 space-y-2">
-          <li>Create and manage your account.</li>
-          <li>Authenticate your identity securely.</li>
-          <li>Provide community and prediction features.</li>
-          <li>Send notifications and verification emails.</li>
-          <li>Prevent fraud and enhance security.</li>
-          <li>Improve our platform and user experience.</li>
-        </ul>
-      ),
-    },
-    {
-      title: 'Facebook Login & Data',
-      content: (
-        <p>
-          When you sign in using Facebook, we receive only your public profile
-          and email address. We never post on your behalf or access your
-          friends list.
-        </p>
-      ),
-    },
-    {
-      title: 'Sharing Your Information',
-      content: (
-        <p>
-          We do not sell, trade, or rent your personal information. Data may
-          only be shared with trusted infrastructure providers or when legally
-          required.
-        </p>
-      ),
-    },
-    {
-      title: 'Data Retention & Deletion',
-      content: (
-        <p>
-          Your information remains stored while your account is active. You may
-          request deletion at any time through account settings or by contacting
-          support.
-        </p>
-      ),
-    },
-    {
-      title: 'Security',
-      content: (
         <>
-          <p>We protect your information using:</p>
+          <p>We may use your information to:</p>
           <ul className="list-disc pl-6 mt-3 space-y-2">
-            <li>HTTPS encryption.</li>
-            <li>Secure password hashing.</li>
-            <li>Token-based authentication.</li>
-            <li>Advanced access control mechanisms.</li>
+            <li>Create and manage your account</li>
+            <li>Authenticate users</li>
+            <li>Operate, maintain and improve the Platform</li>
+            <li>Display user-generated content and participation within the Platform</li>
+            <li>Communicate with you regarding your account or the Platform</li>
+            <li>Maintain security, prevent misuse and investigate suspected violations</li>
+            <li>Comply with applicable legal or regulatory requirements</li>
           </ul>
         </>
       ),
     },
     {
-      title: "Children's Privacy",
+      title: 'Sharing of Information',
+      content: (
+        <>
+          <p>We do not sell your personal information.</p>
+          <p className="mt-3">
+            Your information may be disclosed where necessary:
+          </p>
+          <ul className="list-disc pl-6 mt-3 space-y-2">
+            <li>To service providers supporting the operation of the Platform</li>
+            <li>To our business partners or customers where required for providing the Platform</li>
+            <li>To comply with applicable law, legal process or regulatory requirements</li>
+            <li>To protect the rights, security or integrity of the Platform, its users or third parties</li>
+          </ul>
+        </>
+      ),
+    },
+    {
+      title: 'Data Security',
       content: (
         <p>
-          Our services are not intended for children under 13 years of age. We
-          do not knowingly collect personal information from minors.
+          We implement reasonable technical and organizational measures
+          designed to protect personal information from unauthorized access,
+          disclosure, alteration or loss. No method of electronic storage or
+          transmission can be guaranteed to be completely secure.
         </p>
       ),
     },
     {
-      title: 'Your Rights',
+      title: 'Data Retention',
       content: (
-        <ul className="list-disc pl-6 space-y-2">
-          <li>Access your personal information.</li>
-          <li>Correct inaccurate information.</li>
-          <li>Request account deletion.</li>
-          <li>Request data portability.</li>
-          <li>Withdraw consent where applicable.</li>
-        </ul>
+        <p>
+          Personal information may be retained for as long as reasonably
+          necessary for business, operational, contractual or legal purposes.
+          Information may also be retained where required to establish,
+          exercise or defend legal claims or to comply with applicable law.
+        </p>
       ),
     },
     {
-      title: 'Changes To This Policy',
+      title: 'Managing Your Information',
+      content: (
+        <>
+          <p>
+            Where functionality is available, you may review and update
+            information associated with your account through the Platform.
+          </p>
+          <p className="mt-3">
+            If you wish to request account deletion or have questions
+            regarding your personal information, you may contact us using the
+            details provided below. Requests will be considered in accordance
+            with applicable law and our legitimate business and legal
+            obligations.
+          </p>
+        </>
+      ),
+    },
+    {
+      title: 'Cookies and Similar Technologies',
       content: (
         <p>
-          We may update this Privacy Policy periodically. Any changes will be
-          posted on this page along with the revised effective date.
+          The Platform may use cookies or similar technologies necessary for
+          security, authentication, performance and operation. Additional
+          technologies may be used where permitted or required by applicable
+          law.
+        </p>
+      ),
+    },
+    {
+      title: 'Changes to this Privacy Policy',
+      content: (
+        <p>
+          We may update this Privacy Policy from time to time. Continued use
+          of the Platform after any changes become effective constitutes
+          acceptance of the updated Privacy Policy.
         </p>
       ),
     },
@@ -234,12 +244,13 @@ export default function PrivacyPolicyScreen() {
                 </h1>
 
                 <p className="mt-3 text-muted-foreground text-lg max-w-2xl">
-                  Your privacy matters to us. This policy explains how we
-                  collect, use, protect, and manage your personal information.
+                  This Privacy Policy explains how I Said So ("the Platform",
+                  "we", "our", or "us") collects, uses, stores, and protects
+                  personal information when you use the Platform.
                 </p>
 
                 <div className="mt-4 inline-flex items-center rounded-full bg-violet-500/10 px-4 py-2 text-sm font-medium text-violet-500">
-                  Last Updated • June 2026
+                  Effective Date • DD/MM/YYYY
                 </div>
               </div>
             </div>
@@ -290,8 +301,7 @@ export default function PrivacyPolicyScreen() {
             </div>
 
             <p className="text-muted-foreground mb-6">
-              If you have any questions about this Privacy Policy,
-              please contact us.
+              For privacy-related enquiries, please contact us.
             </p>
 
             <div className="grid md:grid-cols-2 gap-4">
@@ -301,7 +311,7 @@ export default function PrivacyPolicyScreen() {
                   <div>
                     <div className="font-semibold">Email</div>
                     <div className="text-muted-foreground">
-                      support@isaidso.com
+                      privacy@company.com
                     </div>
                   </div>
                 </div>
