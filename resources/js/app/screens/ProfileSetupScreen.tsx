@@ -10,7 +10,7 @@ import { checkAuthStatus } from '@/app/modules/auth/authSlice';
 import axios from 'axios';
 import { AvatarSelector } from '@/app/components/AvatarSelector';
 import { avatarOptions } from '@/app/constants/avatarOptions';
-import { getAuth, postFormDataAuth } from '@/util/api';
+import { getAuth, postFormDataAuth, postAuth } from '@/util/api';
 
 
 
@@ -128,6 +128,25 @@ export function ProfileSetupScreen() {
         }
     };
 
+    const handleSkip = async () => {
+        setIsSubmitting(true);
+        setError('');
+
+        try {
+            await postAuth('/api/profile/skip');
+
+            // Refresh user state to update is_profile_completed
+            const result = await dispatch(checkAuthStatus()).unwrap();
+
+            const isAdmin = ['admin', 'super_admin', 'system_admin'].includes((result?.role || '').toLowerCase().trim());
+            navigate(isAdmin ? '/admin' : '/home', { replace: true });
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Failed to skip profile setup');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/50 to-background p-4">
             <motion.div
@@ -202,6 +221,15 @@ export function ProfileSetupScreen() {
                     }}
                 >
                     {isSubmitting ? 'Saving...' : 'Continue'}
+                </Button>
+
+                <Button
+                    variant="ghost"
+                    className="w-full h-12 mt-4 text-muted-foreground hover:text-foreground"
+                    onClick={handleSkip}
+                    disabled={isSubmitting}
+                >
+                    Skip / Do it Later
                 </Button>
             </motion.div >
         </div >

@@ -160,6 +160,7 @@ Route::middleware(['auth:sanctum', 'not_blocked'])->group(function () {
     Route::post('/refresh', [\App\Http\Controllers\AuthController::class, 'refresh']);
     Route::get('/user', [\App\Http\Controllers\AuthController::class, 'user']);
     Route::post('/profile/update', [\App\Http\Controllers\AuthController::class, 'updateProfile']);
+    Route::post('/profile/skip', [\App\Http\Controllers\AuthController::class, 'skipProfile']);
 
     // Groups
     Route::apiResource('groups', \App\Http\Controllers\GroupController::class);

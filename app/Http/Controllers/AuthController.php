@@ -293,6 +293,18 @@ class AuthController extends Controller
         ]);
     }
 
+    public function skipProfile(Request $request)
+    {
+        $user = $request->user();
+        $user->is_profile_completed = 1;
+        $user->save();
+
+        return response()->json([
+            'message' => 'Profile setup skipped successfully',
+            'user' => $user
+        ]);
+    }
+
     public function verifyEmail(Request $request, $token)
     {
         // Find the verification token
