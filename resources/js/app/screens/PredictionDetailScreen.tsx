@@ -1019,6 +1019,42 @@ export function PredictionDetailScreen() {
 
   const { user: currentUser } = useAppSelector((state) => state.auth);
 
+  const [shareGroupOpen, setShareGroupOpen] = useState(false);
+  const [myGroups, setMyGroups] = useState<any[]>([]);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
+  const [isSharingToGroup, setIsSharingToGroup] = useState(false);
+
+  useEffect(() => {
+    if (shareGroupOpen) {
+      const fetchGroups = async () => {
+        try {
+          const res = await getAuth('/api/groups?my_groups=1');
+          setMyGroups(res?.data ?? res ?? []);
+        } catch (err) {
+          console.error(err);
+        }
+      };
+      fetchGroups();
+    }
+  }, [shareGroupOpen]);
+
+  const handleShareToGroup = async () => {
+    if (selectedGroupIds.length === 0) {
+      toast.error('Select at least one group');
+      return;
+    }
+    setIsSharingToGroup(true);
+    try {
+      const res = await postAuth(`/api/predictions/${id}/share-to-groups`, { group_ids: selectedGroupIds });
+      toast.success(res.message || 'Shared successfully');
+      setShareGroupOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to share to groups');
+    } finally {
+      setIsSharingToGroup(false);
+    }
+  };
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -1371,6 +1407,45 @@ export function PredictionDetailScreen() {
                     <div />
                     {/* Share icons */}
                     <div className="flex items-center gap-1.5">
+                      {prediction?.user_id === currentUser?.id && prediction?.visibility === 'private' && (
+                        <Dialog open={shareGroupOpen} onOpenChange={setShareGroupOpen}>
+                          <DialogTrigger asChild>
+                            <button className="text-[9px] font-bold text-purple-600 bg-purple-50 px-2 py-1.5 rounded-md uppercase tracking-widest mr-2 border border-purple-100 hover:bg-purple-100 transition-all">
+                              Add to Group
+                            </button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-[400px] bg-white rounded-3xl p-5 border-none shadow-2xl">
+                            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-4">Select Groups to Share</h3>
+                            <div className="space-y-2 max-h-[40vh] overflow-y-auto custom-scrollbar pr-1">
+                              {myGroups.length === 0 ? (
+                                <p className="text-xs text-gray-500 font-semibold">You are not in any groups.</p>
+                              ) : (
+                                myGroups.map((group) => (
+                                  <div key={group.id} className="flex items-center gap-3 p-2 rounded-xl border border-gray-100 hover:bg-gray-50 cursor-pointer" onClick={() => {
+                                    setSelectedGroupIds(prev => prev.includes(group.id) ? prev.filter(gid => gid !== group.id) : [...prev, group.id]);
+                                  }}>
+                                    <input 
+                                      type="checkbox" 
+                                      checked={selectedGroupIds.includes(group.id)} 
+                                      onChange={() => {}} 
+                                      className="rounded text-purple-500 focus:ring-purple-500 w-4 h-4"
+                                    />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-bold text-gray-900">{group.name}</p>
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                            <div className="mt-5 flex gap-2">
+                              <Button variant="outline" onClick={() => setShareGroupOpen(false)} className="flex-1 rounded-xl h-10 text-xs font-bold uppercase tracking-widest">Cancel</Button>
+                              <Button onClick={handleShareToGroup} disabled={isSharingToGroup || selectedGroupIds.length === 0} className="flex-1 rounded-xl h-10 text-xs font-bold uppercase tracking-widest bg-purple-600 hover:bg-purple-700 text-white">
+                                {isSharingToGroup ? 'Sharing...' : 'Share'}
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      )}
                       <span className="text-[9px] font-bold text-gray-300 uppercase tracking-widest mr-1">Share</span>
                       {shareButtons.map((btn, i) => (
                         <button

@@ -803,6 +803,7 @@ import { logoutUser, checkAuthStatus } from '@/app/modules/auth/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { AvatarSelector } from '@/app/components/AvatarSelector';
 import { PrivacyDataModal } from '@/app/components/PrivacyDataModal';
+import { Dialog, DialogContent, DialogTrigger } from '@/app/components/ui/dialog';
 import { useState, useEffect } from 'react';
 import { getAuth, postFormDataAuth, deleteAuth, putAuth, patchAuth } from '@/util/api';
 import { toast } from 'sonner';
@@ -910,6 +911,44 @@ export function ProfileScreen() {
   const [editQuestionVotingEndDate, setEditQuestionVotingEndDate] = useState('');
   const [isUpdatingQuestion, setIsUpdatingQuestion] = useState(false);
   
+  // Share & Share to Group state
+  const [shareGroupOpen, setShareGroupOpen] = useState(false);
+  const [selectedPredictionId, setSelectedPredictionId] = useState<number | null>(null);
+  const [myGroups, setMyGroups] = useState<any[]>([]);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
+  const [isSharingToGroup, setIsSharingToGroup] = useState(false);
+
+  useEffect(() => {
+    if (shareGroupOpen) {
+      const fetchGroups = async () => {
+        try {
+          const res = await getAuth('/api/groups?my_groups=1');
+          setMyGroups(res?.data ?? res ?? []);
+        } catch (err) {
+          console.error(err);
+        }
+      };
+      fetchGroups();
+    }
+  }, [shareGroupOpen]);
+
+  const handleShareToGroup = async () => {
+    if (selectedGroupIds.length === 0 || !selectedPredictionId) {
+      toast.error('Select at least one group');
+      return;
+    }
+    setIsSharingToGroup(true);
+    try {
+      const res = await postAuth(`/api/predictions/${selectedPredictionId}/share-to-groups`, { group_ids: selectedGroupIds });
+      toast.success(res.message || 'Shared successfully');
+      setShareGroupOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to share to groups');
+    } finally {
+      setIsSharingToGroup(false);
+    }
+  };
+
   // Privacy & Data Modal state
   const [privacyOpen, setPrivacyOpen] = useState(false);
 
@@ -1375,15 +1414,52 @@ export function ProfileScreen() {
                                   >
                                     {q.visibility === 'public' ? <Lock size={16} className="text-amber-500" /> : <Globe size={16} className="text-blue-500" />}
                                   </Button>
-                                  <Button
-                                    onClick={(e) => { e.stopPropagation(); handleDeleteQuestion(q.id); }}
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-9 w-9 rounded-xl hover:bg-red-50 hover:text-red-500"
-                                  >
-                                    <Trash2 size={16} className="text-rose-500" />
-                                  </Button>
-                                </div>
+                                    <Button
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteQuestion(q.id); }}
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-9 w-9 rounded-xl hover:bg-red-50 hover:text-red-500"
+                                    >
+                                      <Trash2 size={16} className="text-rose-500" />
+                                    </Button>
+
+                                    {/* Share Button */}
+                                    <Button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const url = `${window.location.origin}${q.module_type === 'poll' ? '/poll' : '/prediction'}/${q.id}`;
+                                        const text = `🤔 Predict now on iSaidSo!\n\nQuestion: ${q.questions}\n\nCast your vote and see what others think 👇`;
+                                        if (navigator.share) {
+                                          navigator.share({ title: 'iSaidSo Prediction', text, url }).catch(console.error);
+                                        } else {
+                                          navigator.clipboard.writeText(`${text} ${url}`);
+                                          toast.success('Link copied to clipboard!');
+                                        }
+                                      }}
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-9 px-3 rounded-xl border-gray-200 hover:border-[#a855f7] hover:text-[#a855f7] hover:bg-[#a855f7]/5 transition-all text-xs font-bold"
+                                    >
+                                      Share
+                                    </Button>
+
+                                    {/* Add to Group Button (if Private) */}
+                                    {q.visibility === 'private' && (
+                                      <Button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedPredictionId(q.id);
+                                          setSelectedGroupIds([]);
+                                          setShareGroupOpen(true);
+                                        }}
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-9 px-3 rounded-xl border-[#a855f7]/30 text-[#a855f7] hover:bg-[#a855f7] hover:text-white transition-all text-xs font-bold"
+                                      >
+                                        Add to Group
+                                      </Button>
+                                    )}
+                                  </div>
                               </div>
                             </motion.div>
                           );
@@ -1729,6 +1805,39 @@ export function ProfileScreen() {
         open={privacyOpen} 
         onClose={() => setPrivacyOpen(false)} 
       />
+
+      <Dialog open={shareGroupOpen} onOpenChange={setShareGroupOpen}>
+        <DialogContent className="sm:max-w-[400px] bg-white rounded-3xl p-5 border-none shadow-2xl">
+          <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-4">Select Groups to Share</h3>
+          <div className="space-y-2 max-h-[40vh] overflow-y-auto custom-scrollbar pr-1">
+            {myGroups.length === 0 ? (
+              <p className="text-xs text-gray-500 font-semibold">You are not in any groups.</p>
+            ) : (
+              myGroups.map((group) => (
+                <div key={group.id} className="flex items-center gap-3 p-2 rounded-xl border border-gray-100 hover:bg-gray-50 cursor-pointer" onClick={() => {
+                  setSelectedGroupIds(prev => prev.includes(group.id) ? prev.filter(gid => gid !== group.id) : [...prev, group.id]);
+                }}>
+                  <input 
+                    type="checkbox" 
+                    checked={selectedGroupIds.includes(group.id)} 
+                    onChange={() => {}} 
+                    className="rounded text-purple-500 focus:ring-purple-500 w-4 h-4"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-gray-900">{group.name}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="mt-5 flex gap-2">
+            <Button variant="outline" onClick={() => setShareGroupOpen(false)} className="flex-1 rounded-xl h-10 text-xs font-bold uppercase tracking-widest">Cancel</Button>
+            <Button onClick={handleShareToGroup} disabled={isSharingToGroup || selectedGroupIds.length === 0} className="flex-1 rounded-xl h-10 text-xs font-bold uppercase tracking-widest bg-purple-600 hover:bg-purple-700 text-white">
+              {isSharingToGroup ? 'Sharing...' : 'Share'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <MobileNav />
     </div>

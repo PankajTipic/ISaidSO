@@ -200,6 +200,7 @@ Route::middleware(['auth:sanctum', 'not_blocked'])->group(function () {
     Route::apiResource('predictions', \App\Http\Controllers\PredictionController::class)->only(['store']);
     Route::patch('/predictions/{id}/verify', [\App\Http\Controllers\PredictionController::class, 'verify']);
     Route::patch('/predictions/{id}/toggle-visibility', [\App\Http\Controllers\PredictionController::class, 'toggleVisibility']);
+    Route::post('/predictions/{id}/share-to-groups', [\App\Http\Controllers\PredictionController::class, 'shareToGroups']);
 
     // Leaderboard (auth required because of location filters)
     Route::get('/leaderboard', [\App\Http\Controllers\LeaderboardController::class, 'index']);

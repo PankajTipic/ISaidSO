@@ -232,6 +232,7 @@ import {
   Clock,
   Globe,
   Lock,
+  Share2,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -414,19 +415,37 @@ export function PredictionCard({ prediction }: PredictionCardProps) {
 }}
        className="mc-footer-time font-medium">{timeRemaining}</span>
         </div>
-        <div className="flex items-center gap-0.5 bg-muted/50 px-1.5 py-0.5 rounded-full">
-          <span style={{
-  fontSize: '12px',
-  fontWeight: 400,
-  color: '#000000',
-  lineHeight: '1.3',  
-}} className="font-bold text-foreground/80">{prediction?.answers_count || 0}</span>
-          <span style={{
-  fontSize: '12px',
-  fontWeight: 400,
-  color: '#000000',
-  lineHeight: '1.3',  
-}}>votes</span>
+        <div className="flex items-center gap-1.5">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              const url = `${window.location.origin}${prediction?.module_type === 'poll' ? '/poll' : '/prediction'}/${prediction.id}`;
+              const text = `🤔 Predict now on iSaidSo!\n\nQuestion: ${prediction?.questions}\n\nCast your vote and see what others think 👇`;
+              if (navigator.share) {
+                navigator.share({ title: 'iSaidSo Prediction', text, url }).catch(console.error);
+              } else {
+                navigator.clipboard.writeText(`${text} ${url}`);
+                toast.success('Link copied to clipboard!');
+              }
+            }}
+            className="p-1 hover:bg-muted rounded-full transition-colors"
+          >
+            <Share2 size={13} className="text-gray-500 hover:text-purple-600" />
+          </button>
+          <div className="flex items-center gap-0.5 bg-muted/50 px-1.5 py-0.5 rounded-full">
+            <span style={{
+    fontSize: '12px',
+    fontWeight: 400,
+    color: '#000000',
+    lineHeight: '1.3',  
+  }} className="font-bold text-foreground/80">{prediction?.answers_count || 0}</span>
+            <span style={{
+    fontSize: '12px',
+    fontWeight: 400,
+    color: '#000000',
+    lineHeight: '1.3',  
+  }}>votes</span>
+          </div>
         </div>
       </div>
     </motion.div>

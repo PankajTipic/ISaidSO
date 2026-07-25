@@ -18,7 +18,6 @@ class PredictionController extends Controller
         $userId = Auth::guard('sanctum')->id();
 
         $query = Question::where('module_type', 'prediction')
-            ->where('visibility', 'public')
             ->where('is_archived', false)
             ->with(['field', 'user', 'answerType'])
             ->withCount([
@@ -33,6 +32,26 @@ class PredictionController extends Controller
                 $query->where('answer', 'Vague');
             }
         ]);
+
+        if ($request->boolean('my_predictions') || $request->get('my_predictions') === 'true') {
+            if ($userId) {
+                $query->where('user_id', $userId);
+            } else {
+                return response()->json([
+                    'message' => 'Predictions fetched successfully',
+                    'data' => []
+                ]);
+            }
+        } else {
+            if ($userId) {
+                $query->where(function ($q) use ($userId) {
+                    $q->where('visibility', 'public')
+                      ->orWhere('user_id', $userId);
+                });
+            } else {
+                $query->where('visibility', 'public');
+            }
+        }
 
         if ($request->has('category_id')) {
             $query->where('field_id', $request->get('category_id'));
@@ -316,6 +335,35 @@ $prediction->update(['correct_answer' => $correctAnswer, 'status' => 'closed']);
 
         return response()->json([
             'message' => "Prediction is now {$newVisibility}",
+            'data' => $prediction->load('groups')
+        ]);
+    }
+
+    /**
+     * Share prediction to groups
+     */
+    public function shareToGroups(Request $request, $id)
+    {
+        $prediction = Question::findOrFail($id);
+
+        if ($prediction->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized. Only the creator can share.'], 403);
+        }
+
+        if ($request->has('group_ids')) {
+            $groupIds = $request->get('group_ids', []);
+            // Check if user is member of these groups
+            $joinedGroupIds = Auth::user()->joinedGroups()->pluck('groups.id')->toArray();
+            $validGroupIds = array_intersect($groupIds, $joinedGroupIds);
+            
+            if (!empty($validGroupIds)) {
+                // Attach without detaching existing ones
+                $prediction->groups()->syncWithoutDetaching($validGroupIds);
+            }
+        }
+
+        return response()->json([
+            'message' => 'Prediction shared to groups successfully',
             'data' => $prediction->load('groups')
         ]);
     }

@@ -450,13 +450,13 @@ export function GroupDetailScreen() {
                                                 <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100">
                                                     <div className="flex items-center gap-2">
                                                         <Avatar className="w-8 h-8 border-2 border-white shadow-sm">
-                                                            <AvatarImage src={q.user.avatar || undefined} />
+                                                            <AvatarImage src={q.user?.avatar || undefined} />
                                                             <AvatarFallback className="text-[10px] font-black bg-violet-50 text-[#a855f7]">
-                                                                {q.user.username[0].toUpperCase()}
+                                                                {q.user?.username?.[0]?.toUpperCase() || 'U'}
                                                             </AvatarFallback>
                                                         </Avatar>
                                                         <div className="flex flex-col">
-                                                            <span className="text-[11px] font-black text-slate-800 leading-none">@{q.user.username}</span>
+                                                            <span className="text-[11px] font-black text-slate-800 leading-none">@{q.user?.username || 'user'}</span>
                                                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Creator</span>
                                                         </div>
                                                     </div>
@@ -572,13 +572,13 @@ export function GroupDetailScreen() {
                                         >
                                             <div className="flex items-center gap-3 min-w-0">
                                                 <Avatar className="w-10 h-10 border-2 border-violet-50">
-                                                    <AvatarImage src={req.user.avatar || undefined} />
+                                                    <AvatarImage src={req.user?.avatar || undefined} />
                                                     <AvatarFallback className="bg-violet-100 text-[#a855f7] font-black text-sm">
-                                                        {req.user.username[0].toUpperCase()}
+                                                        {req.user?.username?.[0]?.toUpperCase() || 'U'}
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <div className="min-w-0">
-                                                    <p className="font-black text-slate-800 truncate text-sm">@{req.user.username}</p>
+                                                    <p className="font-black text-slate-800 truncate text-sm">@{req.user?.username || 'Unknown'}</p>
                                                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Requested {new Date(req.created_at).toLocaleDateString()}</p>
                                                 </div>
                                             </div>

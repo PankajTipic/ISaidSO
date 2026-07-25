@@ -4,7 +4,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { PredictionCard } from '@/app/components/PredictionCard';
 import { MobileNav } from '@/app/components/MobileNav';
 import { TopNav } from '@/app/components/TopNav';
-import { Plus, TrendingUp, Flame, Sparkles } from 'lucide-react';
+import { Plus, TrendingUp, Flame, Sparkles, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -13,11 +13,13 @@ import { useAppSelector } from '@/app/store/hooks';
 
 const defaultCategories = [
   { value: 'trending', label: 'Trending' },
+  { value: 'my_predictions', label: 'My Predictions' },
 ];
 
 export function HomeScreen() {
   const navigate = useNavigate();
   const isGuest = useAppSelector((state) => state.auth.isGuest);
+  const currentUser = useAppSelector((state) => state.auth.user);
   const [categories, setCategories] = useState<{ value: string, label: string }[]>(defaultCategories);
   const [selectedCategory, setSelectedCategory] = useState('trending');
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,9 +72,15 @@ export function HomeScreen() {
   const topIds = new Set(topPredictions.map((p) => p.id));
 
   const filteredPredictions = predictions.filter((pred) => {
-    const categoryMatch =
-      selectedCategory === 'trending' ||
-      pred?.field?.fields?.toLowerCase() === selectedCategory.toLowerCase();
+    let categoryMatch = false;
+    if (selectedCategory === 'trending') {
+      categoryMatch = true;
+    } else if (selectedCategory === 'my_predictions') {
+      const predUserId = pred?.user_id ?? pred?.user?.id;
+      categoryMatch = currentUser?.id ? (Number(predUserId) === Number(currentUser.id)) : false;
+    } else {
+      categoryMatch = pred?.field?.fields?.toLowerCase() === selectedCategory.toLowerCase();
+    }
     const searchMatch = pred?.questions
       ?.toLowerCase()
       .includes(searchQuery.toLowerCase());
@@ -132,12 +140,19 @@ export function HomeScreen() {
                     data-[state=active]:shadow-md
                     data-[state=active]:shadow-[#a855f7]/20
                     ring-0 focus-visible:ring-0 focus-visible:outline-none
+                    flex items-center gap-1.5
                   "
                 >
                   {cat.value === 'trending' && (
                     <Flame
                       size={14}
-                      className="data-[state=active]:text-primary-foreground"
+                      className="data-[state=active]:text-primary-foreground text-orange-500"
+                    />
+                  )}
+                  {cat.value === 'my_predictions' && (
+                    <User
+                      size={14}
+                      className="data-[state=active]:text-primary-foreground text-purple-500"
                     />
                   )}
                   {cat.label}
@@ -189,49 +204,36 @@ export function HomeScreen() {
               "
             >
               {categories.map((cat) => (
-                // <TabsTrigger
-                //   key={cat.value}
-                //   value={cat.value}
-                //   className="
-                //     rounded-xl h-full px-5
-                //     text-sm font-semibold
-                //     whitespace-nowrap
-                //     text-muted-foreground
-                //     transition-all duration-200
-                //     data-[state=active]:bg-background
-                //     data-[state=active]:text-foreground
-                //     data-[state=active]:shadow-sm
-                //     ring-0 focus-visible:ring-0
-                //   "
-                // >
+                <TabsTrigger
+                  key={cat.value}
+                  value={cat.value}
+                  className="
+                    flex-shrink-0 whitespace-nowrap
+                    px-3.5 py-1.5 rounded-full
+                    text-xs font-bold
+                    transition-all border
 
-<TabsTrigger
-  key={cat.value}
-  value={cat.value}
-  className="
-    flex-shrink-0 whitespace-nowrap
-    px-3.5 py-1.5 rounded-full
-    text-xs font-bold
-    transition-all border
+                    bg-white dark:bg-white/5
+                    border-gray-200 dark:border-white/10
+                    text-gray-600 dark:text-gray-400
 
-    bg-white dark:bg-white/5
-    border-gray-200 dark:border-white/10
-    text-gray-600 dark:text-gray-400
+                    hover:border-[#a855f7]/40
 
-    hover:border-[#a855f7]/40
+                    data-[state=active]:bg-[#a855f7]
+                    data-[state=active]:text-white
+                    data-[state=active]:border-[#a855f7]
+                    data-[state=active]:shadow-md
+                    data-[state=active]:shadow-[#a855f7]/20
 
-    data-[state=active]:bg-[#a855f7]
-    data-[state=active]:text-white
-    data-[state=active]:border-[#a855f7]
-    data-[state=active]:shadow-md
-    data-[state=active]:shadow-[#a855f7]/20
-
-    ring-0 focus-visible:ring-0 focus-visible:outline-none
-  "
->
-
+                    ring-0 focus-visible:ring-0 focus-visible:outline-none
+                    flex items-center gap-1.5
+                  "
+                >
                   {cat.value === 'trending' && (
-                    <Flame size={13} className="inline mr-1.5 mb-px text-orange-500" />
+                    <Flame size={13} className="inline text-orange-500" />
+                  )}
+                  {cat.value === 'my_predictions' && (
+                    <User size={13} className="inline text-purple-500" />
                   )}
                   {cat.label}
                 </TabsTrigger>
@@ -268,7 +270,6 @@ export function HomeScreen() {
               initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center py-16 gap-3"
             >
-              {/* 16px readable error — FB/IG standard body size */}
               <p className="text-[16px] font-semibold text-destructive text-center px-4">
                 {error}
               </p>
@@ -289,13 +290,9 @@ export function HomeScreen() {
               className="space-y-6 md:space-y-12"
             >
 
-              {/* ── TOP PREDICTIONS section ── */}
+              {/* ── TOP PREDICTIONS section (only shown on Trending tab) ── */}
               {topPredictions.length > 0 && (
                 <section className="space-y-3 md:space-y-5">
-
-                  {/* Section header
-                      Mobile: 17px bold — same weight/size as FB section labels
-                      ("Suggested for you", "Stories from friends") */}
                   <div className="flex items-center gap-2 px-0.5">
                     <TrendingUp size={18} className="text-primary flex-shrink-0" />
                     <h2 className="text-[17px] md:text-xl font-bold text-foreground leading-snug">
@@ -322,7 +319,6 @@ export function HomeScreen() {
                         transition={{ delay: index * 0.08, type: 'spring', stiffness: 300, damping: 24 }}
                         className="relative w-full"
                       >
-                        {/* Rank badge */}
                         <div className="
                           absolute -top-1.5 -right-1.5 z-10
                           w-6 h-6 rounded-full flex items-center justify-center
@@ -341,17 +337,23 @@ export function HomeScreen() {
                 </section>
               )}
 
-              {/* ── LATEST FORECASTS section ── */}
+              {/* ── MAIN FORECASTS section ── */}
               <section className="space-y-3 md:space-y-5">
 
                 <div className="flex items-center gap-2 px-0.5">
-                  <Sparkles size={18} className="text-primary flex-shrink-0" />
-                  {/* 17px bold — FB/IG section label standard */}
+                  {selectedCategory === 'my_predictions' ? (
+                    <User size={18} className="text-purple-500 flex-shrink-0" />
+                  ) : (
+                    <Sparkles size={18} className="text-primary flex-shrink-0" />
+                  )}
                   <h2 className="text-[17px] md:text-xl font-bold text-foreground leading-snug">
-                    Latest Forecasts
+                    {selectedCategory === 'my_predictions'
+                      ? 'My Predictions'
+                      : selectedCategory === 'trending'
+                      ? 'Latest Forecasts'
+                      : `${categories.find(c => c.value === selectedCategory)?.label || ''} Predictions`}
                   </h2>
                   {latestPredictions.length > 0 && (
-                    /* Count chip — 13px, same as IG notification badge text */
                     <span className="text-[13px] font-medium text-muted-foreground">
                       {latestPredictions.length}
                     </span>
@@ -377,13 +379,47 @@ export function HomeScreen() {
 
                   {filteredPredictions.length === 0 && (
                     <div className="col-span-full flex flex-col items-center py-16 gap-2">
-                      {/* Empty state — FB/IG uses 16-17px for primary message */}
-                      <p className="text-[16px] font-semibold text-foreground/70">
-                        No predictions found
-                      </p>
-                      <p className="text-[14px] text-muted-foreground text-center">
-                        Try a different category or search term
-                      </p>
+                      {selectedCategory === 'my_predictions' ? (
+                        isGuest ? (
+                          <>
+                            <User size={36} className="text-muted-foreground/50 mb-1" />
+                            <p className="text-[16px] font-semibold text-foreground/80">
+                              Please log in to view your predictions
+                            </p>
+                            <button
+                              onClick={() => navigate('/auth')}
+                              className="mt-2 px-5 py-2 text-[14px] font-bold bg-[#a855f7] text-white rounded-full shadow hover:bg-[#9333ea] transition-all"
+                            >
+                              Log In / Sign Up
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <User size={36} className="text-muted-foreground/50 mb-1" />
+                            <p className="text-[16px] font-semibold text-foreground/80">
+                              You haven't created any predictions yet
+                            </p>
+                            <p className="text-[14px] text-muted-foreground text-center">
+                              Create your first prediction (public or private) now!
+                            </p>
+                            <button
+                              onClick={() => navigate('/create')}
+                              className="mt-2 px-5 py-2 text-[14px] font-bold bg-[#a855f7] text-white rounded-full shadow hover:bg-[#9333ea] transition-all flex items-center gap-1.5"
+                            >
+                              <Plus size={16} /> Create Prediction
+                            </button>
+                          </>
+                        )
+                      ) : (
+                        <>
+                          <p className="text-[16px] font-semibold text-foreground/70">
+                            No predictions found
+                          </p>
+                          <p className="text-[14px] text-muted-foreground text-center">
+                            Try a different category or search term
+                          </p>
+                        </>
+                      )}
                     </div>
                   )}
                 </motion.div>
