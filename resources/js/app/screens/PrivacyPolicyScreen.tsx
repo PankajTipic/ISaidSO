@@ -250,7 +250,7 @@ export default function PrivacyPolicyScreen() {
                 </p>
 
                 <div className="mt-4 inline-flex items-center rounded-full bg-violet-500/10 px-4 py-2 text-sm font-medium text-violet-500">
-                  Effective Date • DD/MM/YYYY
+                  Effective Date • 01/08/2026
                 </div>
               </div>
             </div>

@@ -722,6 +722,7 @@ import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group';
 
 import { getAuth, deleteAuth, postAuth } from '@/util/api';
 import { toast } from 'sonner';
+import { getCategoryPlaceholder } from '@/util/categoryPlaceholders';
 
 interface QuestionItem {
     id: number; questions: string; module_type: 'prediction' | 'poll';
@@ -773,6 +774,8 @@ export default function PredictionsTab() {
     const [predVotingEndDate, setPredVotingEndDate] = useState('');
     const [predSelectedFieldId, setPredSelectedFieldId] = useState<number | null>(null);
     const [predSelectedGroupIds, setPredSelectedGroupIds] = useState<number[]>([]);
+
+    const predCategoryName = fields.find(f => f.id === predSelectedFieldId)?.fields;
 
     // Create prediction extended fields
     const [predDestinedDate, setPredDestinedDate] = useState('');
@@ -1170,10 +1173,11 @@ const handleConfirmAction = async () => {
                         />
                         {predictionEndDateFilter && (
                             <button
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-violet-400 hover:text-violet-600"
+                                // className="absolute right-3 top-1/2 -translate-y-1/2 text-violet-400 hover:text-violet-600"
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 ps-10 rounded-full text-violet-400 hover:text-violet-600 hover:bg-violet-100"
                                 onClick={() => setPredictionEndDateFilter('')}
                             >
-                                <X size={13} />
+                              {/* <X className='' size={20} /> */}
                             </button>
                         )}
                     </div>
@@ -1358,7 +1362,7 @@ const handleConfirmAction = async () => {
                             <div className="space-y-1.5">
                                 <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Prediction Statement <span className="text-pink-500">*</span></Label>
                                 <Textarea
-                                    placeholder="Write your bold prediction…"
+                                    placeholder={getCategoryPlaceholder(predCategoryName, 'prediction')}
                                     value={predText}
                                     onChange={e => setPredText(e.target.value)}
                                     className="min-h-24 border-violet-200 bg-white focus:bg-white resize-none"

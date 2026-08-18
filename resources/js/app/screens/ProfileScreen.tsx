@@ -789,7 +789,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/ta
 import {
   Trophy, Target, TrendingUp, Award, LogOut, Edit2, Loader2, MapPin,
   User, AtSign, Trash2, Calendar, Globe, Lock, Users, Clock, X,
-  Pencil, Zap, BarChart2, Shield
+  Pencil, Zap, BarChart2, Shield,
+  Twitter, MessageCircle, Send, Link2, MessageSquare
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -807,6 +808,7 @@ import { Dialog, DialogContent, DialogTrigger } from '@/app/components/ui/dialog
 import { useState, useEffect } from 'react';
 import { getAuth, postFormDataAuth, deleteAuth, putAuth, patchAuth } from '@/util/api';
 import { toast } from 'sonner';
+import { getCategoryPlaceholder } from '@/util/categoryPlaceholders';
 
 interface Group {
   id: number;
@@ -910,6 +912,8 @@ export function ProfileScreen() {
   const [editQuestionEndDate, setEditQuestionEndDate] = useState('');
   const [editQuestionVotingEndDate, setEditQuestionVotingEndDate] = useState('');
   const [isUpdatingQuestion, setIsUpdatingQuestion] = useState(false);
+  
+  const editCategoryName = fields.find(f => f.id === editQuestionFieldId)?.fields;
   
   // Share & Share to Group state
   const [shareGroupOpen, setShareGroupOpen] = useState(false);
@@ -1170,6 +1174,58 @@ export function ProfileScreen() {
     );
   };
 
+  const handleSharePrediction = async (q: any, platform: string) => {
+    const url = `${window.location.origin}${q.module_type === 'poll' ? '/poll' : '/prediction'}/${q.id}`;
+    const rawName = q?.user?.name || q?.user?.username || '';
+    const creatorName = rawName ? rawName : 'iSaidSo Community';
+    const creatorHandle = q?.user?.username ? ` (@${q.user.username})` : '';
+    const category = q?.field?.fields || 'General';
+    const deadline = q?.end_date
+      ? new Date(q.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+      : 'TBD';
+    const votes = q?.answers_count ?? 0;
+    const text = [
+      `🔮✨ iSaidSo — Prediction Alert ✨🔮`,
+      ``,
+      `👤 Predicted by: ${creatorName}${creatorHandle}`,
+      `🏷️ Category: ${category}`,
+      ``,
+      `💬 "${q?.questions}"`,
+      ``,
+      `📅 Deadline: ${deadline}`,
+      `🗳️ Votes Cast: ${votes} participant${votes !== 1 ? 's' : ''} so far`,
+      ``,
+      `━━━━━━━━━━━━━━━━━━━━━`,
+      `🔗 Join & Cast Your Prediction:`,
+      `${url}`,
+      `━━━━━━━━━━━━━━━━━━━━━`,
+      ``,
+      `⚡ iSaidSo · Predict. Vote. Prove it.`,
+      `🌐 https://isaidso.social/`,
+    ].join('\n');
+    const encodedText = encodeURIComponent(text);
+    const encodedUrl = encodeURIComponent(url);
+
+    if (platform === 'native') {
+      if (navigator.share) {
+        try { await navigator.share({ title: '🔮 iSaidSo — Prediction Alert', text }); }
+        catch (err) { console.error('Error sharing:', err); }
+      } else {
+        try { await navigator.clipboard.writeText(text); toast.success('Prediction link copied to clipboard!'); }
+        catch { toast.error('Failed to copy link'); }
+      }
+      return;
+    }
+    let shareUrl = '';
+    switch (platform) {
+      case 'twitter': shareUrl = `https://twitter.com/intent/tweet?text=${encodedText}`; break;
+      case 'whatsapp': shareUrl = `https://wa.me/?text=${encodedText}`; break;
+      case 'telegram': shareUrl = `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`; break;
+      case 'sms': shareUrl = `sms:?&body=${encodedText}`; break;
+    }
+    if (shareUrl) window.open(shareUrl, '_blank');
+  };
+
   const handleLogout = async () => {
     await dispatch(logoutUser());
     navigate('/auth');
@@ -1414,52 +1470,51 @@ export function ProfileScreen() {
                                   >
                                     {q.visibility === 'public' ? <Lock size={16} className="text-amber-500" /> : <Globe size={16} className="text-blue-500" />}
                                   </Button>
-                                    <Button
-                                      onClick={(e) => { e.stopPropagation(); handleDeleteQuestion(q.id); }}
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-9 w-9 rounded-xl hover:bg-red-50 hover:text-red-500"
-                                    >
-                                      <Trash2 size={16} className="text-rose-500" />
-                                    </Button>
-
-                                    {/* Share Button */}
+                                  <Button
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteQuestion(q.id); }}
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-9 w-9 rounded-xl hover:bg-red-50 hover:text-red-500"
+                                  >
+                                    <Trash2 size={16} className="text-rose-500" />
+                                  </Button>
+                                  {/* Add to Group Button (if Private) */}
+                                  {q.visibility === 'private' && (
                                     <Button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        const url = `${window.location.origin}${q.module_type === 'poll' ? '/poll' : '/prediction'}/${q.id}`;
-                                        const text = `🤔 Predict now on iSaidSo!\n\nQuestion: ${q.questions}\n\nCast your vote and see what others think 👇`;
-                                        if (navigator.share) {
-                                          navigator.share({ title: 'iSaidSo Prediction', text, url }).catch(console.error);
-                                        } else {
-                                          navigator.clipboard.writeText(`${text} ${url}`);
-                                          toast.success('Link copied to clipboard!');
-                                        }
+                                        setSelectedPredictionId(q.id);
+                                        setSelectedGroupIds([]);
+                                        setShareGroupOpen(true);
                                       }}
                                       size="sm"
                                       variant="outline"
-                                      className="h-9 px-3 rounded-xl border-gray-200 hover:border-[#a855f7] hover:text-[#a855f7] hover:bg-[#a855f7]/5 transition-all text-xs font-bold"
+                                      className="h-9 px-3 rounded-xl border-[#a855f7]/30 text-[#a855f7] hover:bg-[#a855f7] hover:text-white transition-all text-xs font-bold"
                                     >
-                                      Share
+                                      Add to Group
                                     </Button>
+                                  )}
+                                </div>
+                              </div>
 
-                                    {/* Add to Group Button (if Private) */}
-                                    {q.visibility === 'private' && (
-                                      <Button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSelectedPredictionId(q.id);
-                                          setSelectedGroupIds([]);
-                                          setShareGroupOpen(true);
-                                        }}
-                                        size="sm"
-                                        variant="outline"
-                                        className="h-9 px-3 rounded-xl border-[#a855f7]/30 text-[#a855f7] hover:bg-[#a855f7] hover:text-white transition-all text-xs font-bold"
-                                      >
-                                        Add to Group
-                                      </Button>
-                                    )}
-                                  </div>
+                              {/* Share icon row — bottom-right of card, outside the top flex row */}
+                              <div className="flex items-center justify-end gap-1 mt-3 pt-2 border-t border-gray-100/80">
+                                <span className="text-[9px] font-bold text-gray-300 uppercase tracking-widest mr-1">Share</span>
+                                {[
+                                  { icon: <Twitter size={13} />, color: 'text-blue-400', platform: 'twitter' },
+                                  { icon: <MessageCircle size={13} />, color: 'text-emerald-500', platform: 'whatsapp' },
+                                  { icon: <Send size={13} />, color: 'text-blue-500', platform: 'telegram' },
+                                  { icon: <MessageSquare size={13} />, color: 'text-purple-500', platform: 'sms' },
+                                  { icon: <Link2 size={13} />, color: 'text-amber-600', platform: 'native' },
+                                ].map((btn, i) => (
+                                  <button
+                                    key={i}
+                                    onClick={(e) => { e.stopPropagation(); handleSharePrediction(q, btn.platform); }}
+                                    className="w-6 h-6 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center hover:bg-gray-100 hover:-translate-y-0.5 transition-all"
+                                  >
+                                    <span className={btn.color}>{btn.icon}</span>
+                                  </button>
+                                ))}
                               </div>
                             </motion.div>
                           );
@@ -1725,7 +1780,7 @@ export function ProfileScreen() {
                 <SectionCard paletteIndex={1}>
                   <SectionHeading icon={Zap} label="Your prediction" paletteIndex={1} />
                   <Textarea
-                    placeholder="Write your prediction..."
+                    placeholder={getCategoryPlaceholder(editCategoryName, 'prediction')}
                     value={editQuestionText}
                     onChange={e => setEditQuestionText(e.target.value)}
                     className="bg-white border-gray-200 min-h-24 p-4 text-sm"

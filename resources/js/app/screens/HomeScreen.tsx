@@ -73,7 +73,9 @@ export function HomeScreen() {
 
   const filteredPredictions = predictions.filter((pred) => {
     let categoryMatch = false;
-    if (selectedCategory === 'trending') {
+    if (searchQuery.trim() !== '') {
+      categoryMatch = true; // Show all predictions when searching
+    } else if (selectedCategory === 'trending') {
       categoryMatch = true;
     } else if (selectedCategory === 'my_predictions') {
       const predUserId = pred?.user_id ?? pred?.user?.id;

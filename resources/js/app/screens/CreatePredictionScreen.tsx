@@ -26,6 +26,7 @@ import { TopNav } from '@/app/components/TopNav';
 import { MobileNav } from '@/app/components/MobileNav';
 import { useAppSelector } from '@/app/store/hooks';
 import { getAuth, postAuth } from '@/util/api';
+import { getCategoryPlaceholder } from '@/util/categoryPlaceholders';
 
 // ── Types ──────────────────────────────────────────────────
 type AnswerType = 'yes-no' | 'mcq' | 'numeric' | 'datetime';
@@ -130,6 +131,8 @@ export function CreatePredictionScreen() {
 
   const [myGroups, setMyGroups] = useState<MyGroup[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
+
+  const selectedCategoryName = fields.find(f => f.id === selectedFieldId)?.fields;
 
 
   useEffect(() => {
@@ -450,7 +453,7 @@ export function CreatePredictionScreen() {
               <SectionCard paletteIndex={1}>
                 <SectionHeading icon={Zap} label="Your prediction" paletteIndex={1} />
                 <Textarea
-                  placeholder="Write your bold prediction..."
+                  placeholder={getCategoryPlaceholder(selectedCategoryName, 'prediction')}
                   value={text}
                   onChange={e => setText(e.target.value)}
                   className="bg-white border-border min-h-28 p-4 text-sm text-foreground"
@@ -612,7 +615,7 @@ export function CreatePredictionScreen() {
               {/* Poll question */}
               <SectionCard paletteIndex={0}>
                 <SectionHeading icon={Zap} label="Poll question" paletteIndex={0} />
-                <Textarea placeholder="What would you like to ask?"
+                <Textarea placeholder={getCategoryPlaceholder(selectedCategoryName, 'poll')}
                   value={text} onChange={e => setText(e.target.value)}
                   className="bg-white border-border min-h-28 p-4 text-sm" maxLength={500} />
                 <div className="flex justify-end mt-1">

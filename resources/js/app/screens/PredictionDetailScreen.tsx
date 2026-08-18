@@ -1143,26 +1143,52 @@ export function PredictionDetailScreen() {
 
   const handleShare = async (platform: string) => {
     const url = window.location.href;
-    const text = `🤔 Predict now on iSaidSo!\n\nQuestion: ${prediction?.questions}\n\nCast your vote and see what others think 👇`;
-    const encodedUrl = encodeURIComponent(url);
+    const rawName = prediction?.user?.name || prediction?.user?.username || '';
+    const creatorName = rawName ? rawName : 'iSaidSo Community';
+    const creatorHandle = prediction?.user?.username ? ` (@${prediction.user.username})` : '';
+    const category = prediction?.field?.fields || 'General';
+    const deadline = prediction?.end_date
+      ? new Date(prediction.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+      : 'TBD';
+    const votes = prediction?.answers_count ?? 0;
+    const text = [
+      `🔮✨ iSaidSo — Prediction Alert ✨🔮`,
+      ``,
+      `👤 Predicted by: ${creatorName}${creatorHandle}`,
+      `🏷️ Category: ${category}`,
+      ``,
+      `💬 "${prediction?.questions}"`,
+      ``,
+      `📅 Deadline: ${deadline}`,
+      `🗳️ Votes Cast: ${votes} participant${votes !== 1 ? 's' : ''} so far`,
+      ``,
+      `━━━━━━━━━━━━━━━━━━━━━`,
+      `🔗 Join & Cast Your Prediction:`,
+      `${url}`,
+      `━━━━━━━━━━━━━━━━━━━━━`,
+      ``,
+      `⚡ iSaidSo · Predict. Vote. Prove it.`,
+      `🌐 https://isaidso.social/`,
+    ].join('\n');
     const encodedText = encodeURIComponent(text);
+    const encodedUrl = encodeURIComponent(url);
 
     if (platform === 'native') {
       if (navigator.share) {
-        try { await navigator.share({ title: 'iSaidSo Prediction', text, url }); }
+        try { await navigator.share({ title: '🔮 iSaidSo — Prediction Alert', text }); }
         catch (err) { console.error('Error sharing:', err); }
       } else {
-        try { await navigator.clipboard.writeText(`${text} ${url}`); toast.success('Link copied to clipboard!'); }
+        try { await navigator.clipboard.writeText(text); toast.success('Prediction link copied to clipboard!'); }
         catch (err) { toast.error('Failed to copy link'); }
       }
       return;
     }
     let shareUrl = '';
     switch (platform) {
-      case 'twitter': shareUrl = `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`; break;
-      case 'whatsapp': shareUrl = `https://wa.me/?text=${encodedText}%20${encodedUrl}`; break;
+      case 'twitter': shareUrl = `https://twitter.com/intent/tweet?text=${encodedText}`; break;
+      case 'whatsapp': shareUrl = `https://wa.me/?text=${encodedText}`; break;
       case 'telegram': shareUrl = `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`; break;
-      case 'sms': shareUrl = `sms:?&body=${encodedText}%20${encodedUrl}`; break;
+      case 'sms': shareUrl = `sms:?&body=${encodedText}`; break;
     }
     if (shareUrl) window.open(shareUrl, '_blank');
   };

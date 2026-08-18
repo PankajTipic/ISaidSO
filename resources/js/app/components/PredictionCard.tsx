@@ -420,12 +420,38 @@ export function PredictionCard({ prediction }: PredictionCardProps) {
             onClick={(e) => {
               e.stopPropagation();
               const url = `${window.location.origin}${prediction?.module_type === 'poll' ? '/poll' : '/prediction'}/${prediction.id}`;
-              const text = `🤔 Predict now on iSaidSo!\n\nQuestion: ${prediction?.questions}\n\nCast your vote and see what others think 👇`;
+              const rawName = prediction?.user?.name || prediction?.user?.username || '';
+              const creatorName = rawName ? rawName : 'iSaidSo Community';
+              const creatorHandle = prediction?.user?.username ? ` (@${prediction.user.username})` : '';
+              const category = prediction?.field?.fields || 'General';
+              const deadline = prediction?.end_date
+                ? new Date(prediction.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                : 'TBD';
+              const votes = prediction?.answers_count ?? 0;
+              const text = [
+                `🔮✨ iSaidSo — Prediction Alert ✨🔮`,
+                ``,
+                `👤 Predicted by: ${creatorName}${creatorHandle}`,
+                `🏷️ Category: ${category}`,
+                ``,
+                `💬 "${prediction?.questions}"`,
+                ``,
+                `📅 Deadline: ${deadline}`,
+                `🗳️ Votes Cast: ${votes} participant${votes !== 1 ? 's' : ''} so far`,
+                ``,
+                `━━━━━━━━━━━━━━━━━━━━━`,
+                `🔗 Join & Cast Your Prediction:`,
+                `${url}`,
+                `━━━━━━━━━━━━━━━━━━━━━`,
+                ``,
+                `⚡ iSaidSo · Predict. Vote. Prove it.`,
+                `🌐 https://isaidso.social/`,
+              ].join('\n');
               if (navigator.share) {
-                navigator.share({ title: 'iSaidSo Prediction', text, url }).catch(console.error);
+                navigator.share({ title: '🔮 iSaidSo — Prediction Alert', text }).catch(console.error);
               } else {
-                navigator.clipboard.writeText(`${text} ${url}`);
-                toast.success('Link copied to clipboard!');
+                navigator.clipboard.writeText(text);
+                toast.success('Prediction link copied to clipboard!');
               }
             }}
             className="p-1 hover:bg-muted rounded-full transition-colors"
